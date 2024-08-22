@@ -22,6 +22,7 @@ impl AppConfig {
     pub const API_KEY_HEADER: &'static str = "x-api-key";
     const DEFAULT_CONNECTION_POOL_SIZE: u32 = 10;
     const DEFAULT_PORT: u16 = 8080;
+    const API_KEY_SEPARATOR: char = ',';
 
     pub async fn new() -> Self {
         Self {
@@ -74,7 +75,7 @@ impl AppConfig {
     fn read_api_keys_from_env() -> ApiKeys {
         dotenv::var("API_KEYS")
             .expect("No 'API_KEYS' was provided.")
-            .split(',')
+            .split(Self::API_KEY_SEPARATOR)
             .map(ApiKey::new)
             .collect::<Vec<ApiKey>>()
             .into()

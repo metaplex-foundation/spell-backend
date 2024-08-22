@@ -1,0 +1,20 @@
+[package]
+name = "rest-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = { workspace = true }
+
+tracing-subscriber = { workspace = true }
+tracing-actix-web = { workspace = true }
+tracing = { workspace = true }
+
+serde = { workspace = true }
+futures = { workspace = true }
+dotenv = { workspace = true }
+
+sqlx = { workspace = true }
+uuid = { workspace = true }

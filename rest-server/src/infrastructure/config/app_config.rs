@@ -20,7 +20,8 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub const API_KEY_HEADER: &'static str = "x-api-key";
-    const DEFAULT_CONNECTION_POOP_SIZE: u32 = 10;
+    const DEFAULT_CONNECTION_POOL_SIZE: u32 = 10;
+    const DEFAULT_PORT: u16 = 8080;
 
     pub async fn new() -> Self {
         Self {
@@ -50,12 +51,12 @@ impl AppConfig {
                 .inspect(|_| error!("Failed to read 'HOST'!"))
                 .ok()
                 .and_then(Self::parse)
-                .unwrap_or(Ipv4Addr::new(127, 0, 0, 1)),
+                .unwrap_or(Ipv4Addr::LOCALHOST),
             dotenv::var("PORT")
                 .inspect_err(|_| error!("Failed to read 'PORT'!"))
                 .ok()
                 .and_then(Self::parse)
-                .unwrap_or(8080),
+                .unwrap_or(Self::DEFAULT_PORT),
         )
     }
 
@@ -63,11 +64,11 @@ impl AppConfig {
         dotenv::var("DATABASE_URL").unwrap_or_else(|_| panic!("Failed to read 'DATABASE_URL'!"))
     }
 
-    fn connection_pool_size() -> u32 {
-        dotenv::var("CONNECTION_POOP_SIZE")
-            .unwrap_or_else(|_| panic!("Failed to read 'CONNECTION_POOP_SIZE'!"))
+    fn read_connection_pool_size() -> u32 {
+        dotenv::var("CONNECTION_POOL_SIZE")
+            .unwrap_or_else(|_| panic!("Failed to read 'CONNECTION_POOL_SIZE'!"))
             .parse()
-            .unwrap_or(Self::DEFAULT_CONNECTION_POOP_SIZE)
+            .unwrap_or(Self::DEFAULT_CONNECTION_POOL_SIZE)
     }
 
     fn read_api_keys_from_env() -> ApiKeys {
@@ -80,7 +81,7 @@ impl AppConfig {
     }
 
     async fn create_connection_pool() -> ConnectionPool {
-        let (size, db_url) = (Self::connection_pool_size(), Self::read_database_url());
+        let (size, db_url) = (Self::read_connection_pool_size(), Self::read_database_url());
         info!("Creating connection pool from: '{db_url}', with size of {size} connections.");
         PgPoolOptions::new()
             .max_connections(size)

@@ -1,7 +1,7 @@
 use crate::infrastructure::config::app_config::AppConfig;
 use crate::infrastructure::logging::tracing::set_up_logging;
-use std::io::Result;
 use crate::infrastructure::web::app::start_up;
+use std::io::Result;
 
 mod infrastructure;
 

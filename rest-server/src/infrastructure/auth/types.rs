@@ -23,6 +23,7 @@ impl Debug for ApiKey {
 pub struct ApiKeys(Vec<ApiKey>);
 
 impl ApiKeys {
+    #[allow(dead_code)]
     pub fn new<T: Iterator<Item = ApiKey>>(keys: T) -> Self {
         Self(keys.collect())
     }

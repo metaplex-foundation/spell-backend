@@ -2,12 +2,10 @@ use crate::infrastructure::auth::types::{ApiKey, ApiKeys};
 use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
 use crate::infrastructure::endpoints::health_check::{health, secured_health};
 use actix_web::web::{Data, ServiceConfig};
-use std::net::Ipv4Addr;
-use std::path::PathBuf;
-use std::str::FromStr;
-use futures::TryFutureExt;
-use sqlx::{Pool, Postgres};
 use sqlx::postgres::PgPoolOptions;
+use sqlx::{Pool, Postgres};
+use std::net::Ipv4Addr;
+use std::str::FromStr;
 use tracing::{error, info};
 
 type ConnectionPool = Pool<Postgres>;
@@ -16,6 +14,7 @@ type ConnectionPool = Pool<Postgres>;
 pub struct AppConfig {
     host_and_port: (Ipv4Addr, u16),
     api_keys: ApiKeys,
+    #[allow(dead_code)]
     connection_pool: ConnectionPool,
 }
 
@@ -26,7 +25,7 @@ impl AppConfig {
         Self {
             host_and_port: Self::read_host_and_port(),
             api_keys: Self::read_api_keys_from_env(),
-            connection_pool: Self::create_connection_pool().await
+            connection_pool: Self::create_connection_pool().await,
         }
     }
 
@@ -60,8 +59,7 @@ impl AppConfig {
     }
 
     fn read_database_url() -> String {
-        dotenv::var("DATABASE_URL")
-            .unwrap_or_else(|_| panic!("Failed to read 'DATABASE_URL'!"))
+        dotenv::var("DATABASE_URL").unwrap_or_else(|_| panic!("Failed to read 'DATABASE_URL'!"))
     }
 
     fn connection_pool_size() -> u32 {
@@ -74,14 +72,14 @@ impl AppConfig {
     fn read_api_keys_from_env() -> ApiKeys {
         dotenv::var("API_KEYS")
             .expect("No 'API_KEYS' was provided.")
-            .split(",")
+            .split(',')
             .map(ApiKey::new)
             .collect::<Vec<ApiKey>>()
             .into()
     }
 
     async fn create_connection_pool() -> ConnectionPool {
-        let (size, db_url)= (Self::connection_pool_size(), Self::read_database_url());
+        let (size, db_url) = (Self::connection_pool_size(), Self::read_database_url());
         info!("Creating connection pool from: '{db_url}', with size of {size} connections.");
         PgPoolOptions::new()
             .max_connections(size)

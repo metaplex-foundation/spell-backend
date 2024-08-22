@@ -1,12 +1,13 @@
 use crate::infrastructure::auth::types::ApiKeyExtractor;
+use crate::infrastructure::config::app_config::AppConfig;
 use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::web::Data;
-use actix_web::{dev::Payload, Error, FromRequest, HttpRequest};
+use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 
 impl FromRequest for ApiKeyExtractor {
-    type Error = Error;
+    type Error = ActixError;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
@@ -16,7 +17,8 @@ impl FromRequest for ApiKeyExtractor {
                 .map(|ctx| ctx.get_api_keys())
             {
                 Some(api_keys) => {
-                    let Some(provided_api_key) = req.head().headers.get("x-api-key") else {
+                    let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER)
+                    else {
                         return ready(Err(ErrorBadRequest("No header found.")));
                     };
 

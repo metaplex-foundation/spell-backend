@@ -19,6 +19,7 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    pub const API_KEY_HEADER: &'static str = "x-api-key";
     const DEFAULT_CONNECTION_POOP_SIZE: u32 = 10;
 
     pub async fn new() -> Self {

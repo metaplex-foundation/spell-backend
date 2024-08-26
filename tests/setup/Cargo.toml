@@ -1,0 +1,13 @@
+[package]
+name = "setup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+
+testcontainers = { workspace = true, features = ["blocking"] }
+testcontainers-modules = { workspace = true, features = ["postgres"]  }
+
+tokio = { workspace = true }
+sqlx = { workspace = true }

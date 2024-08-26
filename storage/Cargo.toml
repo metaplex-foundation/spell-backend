@@ -1,0 +1,11 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+chrono = { workspace = true }
+
+async-trait = { workspace = true }

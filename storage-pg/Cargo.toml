@@ -1,0 +1,20 @@
+[package]
+name = "storage-pg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+storage = { path = "../storage" }
+
+anyhow = { workspace = true }
+chrono = { workspace = true }
+
+tracing = { workspace = true, features = [ "log" ] }
+
+async-trait = { workspace = true }
+tokio = { workspace = true }
+
+sqlx = { workspace = true }
+
+[dev-dependencies]
+setup = { path = "../tests/setup" }

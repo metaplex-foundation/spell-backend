@@ -5,6 +5,7 @@ use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthori
 use actix_web::web::Data;
 use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
+use tracing::info;
 
 impl FromRequest for ApiKeyExtractor {
     type Error = ActixError;
@@ -15,6 +16,7 @@ impl FromRequest for ApiKeyExtractor {
             match req
                 .app_data::<Data<ApiKeysProviderCtx>>()
                 .map(|ctx| ctx.get_api_keys())
+                .inspect(|_| info!("'ApiKeysProviderCtx' extracted successfully."))
             {
                 Some(api_keys) => {
                     let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER)

@@ -1,4 +1,4 @@
-# Spell Backend
+# Spell Backend 🧙‍
 Backend services for Spell Wallet.
 
 ## REST Server

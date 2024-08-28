@@ -1,0 +1,22 @@
+[package]
+name = "json-rpc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true }
+jsonrpc-http-server = { workspace = true }
+jsonrpc-core = { workspace = true }
+
+tracing-subscriber = { workspace = true }
+tracing-actix-web = { workspace = true }
+tracing = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+dotenv = { workspace = true }
+
+sqlx = { workspace = true }
+uuid = { workspace = true }
+
+async-trait = { workspace = true }

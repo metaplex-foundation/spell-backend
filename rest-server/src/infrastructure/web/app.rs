@@ -4,7 +4,7 @@ use std::io::Result;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
 
-pub async fn start_up(app_config: AppConfig) -> Result<()> {
+pub async fn start_up_rest_server(app_config: AppConfig) -> Result<()> {
     let host_and_port = app_config.host_and_port();
 
     info!("Starting server");

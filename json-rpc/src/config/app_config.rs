@@ -1,7 +1,8 @@
-use crate::infrastructure::auth::types::{ApiKey, ApiKeys};
-use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
-use crate::infrastructure::endpoints::health_check::{health, secured_health};
-use actix_web::web::{Data, ServiceConfig};
+use crate::config::app_context::AppCtx;
+use crate::config::method_builder::RpcMethodBuilder;
+use crate::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
+use crate::endpoints::health_check::health;
+use jsonrpc_core::IoHandler;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::Ipv4Addr;
@@ -11,48 +12,47 @@ use tracing::{error, info};
 #[derive(Clone, Debug)]
 pub struct AppConfig {
     host_and_port: (Ipv4Addr, u16),
-    api_keys: ApiKeys,
-    #[allow(dead_code)]
     connection_pool: PgPool,
 }
 
 impl AppConfig {
-    pub const API_KEY_HEADER: &'static str = "x-api-key";
     const DEFAULT_CONNECTION_POOL_SIZE: u32 = 10;
-    const DEFAULT_PORT: u16 = 8080;
-    const API_KEY_SEPARATOR: char = ',';
+    const DEFAULT_PORT: u16 = 3030;
 
     pub async fn new() -> Self {
         Self {
             host_and_port: Self::read_host_and_port(),
-            api_keys: Self::read_api_keys_from_env(),
             connection_pool: Self::create_connection_pool().await,
         }
     }
 
-    pub fn host_and_port(&self) -> (Ipv4Addr, u16) {
-        self.host_and_port
+    pub fn host(&self) -> Ipv4Addr {
+        self.host_and_port.0
     }
 
-    pub fn app_configuration(&self) -> impl FnOnce(&mut ServiceConfig) + '_ {
-        |cfg: &mut ServiceConfig| {
-            let api_keys_provider_ctx = ApiKeysProviderCtx::from_memory(self.api_keys.clone());
+    pub fn port(&self) -> u16 {
+        self.host_and_port.1
+    }
 
-            cfg.app_data(Data::new(api_keys_provider_ctx))
-                .service(health)
-                .service(secured_health);
-        }
+    pub fn register_rpc_methods(self) -> IoHandler {
+        RpcMethodBuilder::new(AppCtx::new(self.connection_pool).arced())
+            .add_method_without_ctx_and_params("health", health)
+            .add_method("get_asset", get_asset)
+            .add_method("get_asset_batch", get_asset_batch)
+            .add_method("get_asset_by_owner", get_asset_by_owner)
+            .add_method("get_asset_by_creator", get_asset_by_creator)
+            .build()
     }
 
     fn read_host_and_port() -> (Ipv4Addr, u16) {
         (
-            dotenv::var("REST_HOST")
-                .inspect(|_| error!("Failed to read 'REST_HOST'!"))
+            dotenv::var("JSON_RPC_HOST")
+                .inspect(|_| error!("Failed to read 'JSON_RPC_HOST'!"))
                 .ok()
                 .and_then(Self::parse)
                 .unwrap_or(Ipv4Addr::LOCALHOST),
-            dotenv::var("REST_PORT")
-                .inspect_err(|_| error!("Failed to read 'REST_PORT'!"))
+            dotenv::var("JSON_RPC_PORT")
+                .inspect_err(|_| error!("Failed to read 'JSON_RPC_PORT'!"))
                 .ok()
                 .and_then(Self::parse)
                 .unwrap_or(Self::DEFAULT_PORT),
@@ -68,15 +68,6 @@ impl AppConfig {
             .unwrap_or_else(|_| panic!("Failed to read 'CONNECTION_POOL_SIZE'!"))
             .parse()
             .unwrap_or(Self::DEFAULT_CONNECTION_POOL_SIZE)
-    }
-
-    fn read_api_keys_from_env() -> ApiKeys {
-        dotenv::var("API_KEYS")
-            .expect("No 'API_KEYS' was provided.")
-            .split(Self::API_KEY_SEPARATOR)
-            .map(ApiKey::new)
-            .collect::<Vec<ApiKey>>()
-            .into()
     }
 
     async fn create_connection_pool() -> PgPool {

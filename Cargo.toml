@@ -1,12 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
+    "json-rpc",
     "rest-server"
 ]
 
 [workspace.dependencies]
 # Tokio ecosystem
-#tokio = { version = "1.39.0", features = ["full", "sync", "tracing"] }
+tokio = { version = "1", features = ["full", "sync", "tracing"] }
 
 
 # Database infrastructure
@@ -27,6 +28,8 @@ tracing-subscriber =  { version = "0.3.16", features = ["env-filter"] }
 
 # HTTP, RPC and Schemas
 actix-web = "4.9.0"
+jsonrpc-http-server = "18.0.0"
+jsonrpc-core = "18.0.0"
 
 
 # Traits

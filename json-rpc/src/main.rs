@@ -1,11 +1,15 @@
-use crate::infrastructure::config::app_config::AppConfig;
-use crate::infrastructure::logging::tracing::set_up_logging;
-use crate::infrastructure::web::app::start_up_rest_server;
+mod config;
+mod endpoints;
+mod logging;
+mod rpc;
+
+use crate::config::app_config::AppConfig;
+use crate::logging::tracing::set_up_logging;
+use crate::rpc::app::start_up_json_rpc;
+use jsonrpc_http_server::tokio;
 use std::io::Result;
 
-mod infrastructure;
-
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     dotenv::dotenv()
         .inspect_err(|_| eprintln!("Cannot find '.env' file!"))
@@ -14,5 +18,5 @@ async fn main() -> Result<()> {
 
     set_up_logging();
 
-    start_up_rest_server(AppConfig::new().await).await
+    start_up_json_rpc(AppConfig::new().await)
 }

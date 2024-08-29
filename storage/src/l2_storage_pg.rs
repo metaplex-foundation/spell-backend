@@ -1,3 +1,5 @@
+use std::{i64, u32};
+
 use entities::l2::{L2Asset, PublicKey};
 use sqlx::{postgres::{PgConnectOptions, PgPoolOptions, PgRow}, ConnectOptions, PgPool, Row};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
@@ -45,7 +47,7 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     pib44_account_num,
-                    pib44_change_num
+                    pib44_address_num
                 )
             "#);
         query_builder.push_values(std::iter::once(asset), |mut builder, a| {
@@ -58,7 +60,7 @@ impl L2Storage for L2StoragePg {
                 .push_bind(&a.authority)
                 .push_bind(&a.create_timestamp)
                 .push_bind(a.pib44_account_num as i64)
-                .push_bind(a.pib44_change_num as i64);
+                .push_bind(a.pib44_address_num as i64);
         });
         query_builder.push(r#"
                 ON CONFLICT(asset_pubkey) DO UPDATE SET
@@ -88,7 +90,7 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     pib44_account_num,
-                    pib44_change_num
+                    pib44_address_num
                 FROM l2_assets_v1
                 WHERE asset_pubkey = 
             "#);
@@ -105,7 +107,7 @@ impl L2Storage for L2StoragePg {
 
 fn from_row(row: &PgRow) -> anyhow::Result<L2Asset> {
     let pib44_account_num: i64 = row.try_get("pib44_account_num")?;
-    let pib44_change_num: i64 = row.try_get("pib44_change_num")?;
+    let pib44_change_num: i64 = row.try_get("pib44_address_num")?;
 
     Ok(L2Asset{
         pubkey: row.try_get("asset_pubkey")?,
@@ -116,43 +118,40 @@ fn from_row(row: &PgRow) -> anyhow::Result<L2Asset> {
         authority: row.try_get("asset_authority")?,
         create_timestamp: row.try_get("asset_create_timestamp")?,
         pib44_account_num: pib44_account_num as u32,
-        pib44_change_num: pib44_change_num as u32,
+        pib44_address_num: pib44_change_num as u32,
     })
 }
 
 #[derive(sqlx::FromRow, Debug)]
 struct Bip44Row {
-    pub account: i64,
-    pub change: i64,
+    pub seq_val: i64,
 }
 
 #[async_trait::async_trait]
 impl Bip44DerivationSequence for L2StoragePg {
-    async fn next_account(&self) -> anyhow::Result<DerivationValues> {
-        let mut tx = self.pool.begin().await?;
-
-        sqlx::query("ALTER SEQUENCE last_bip44_change RESTART WITH 1")
-            .execute(&mut tx)
-            .await?;
-
-        let Bip44Row {account, change}  = sqlx::query_as(r#"
-            SELECT nextval('last_bip44_account') as account, nextval('last_bip44_change') as change
-        "#)
-            .fetch_one(&mut tx)
-            .await?;
-
-        tx.commit().await?;
-
-        Ok(DerivationValues { account: account as u32, change: change as u32 })
-    }
-
-    async fn next_change(&self) -> anyhow::Result<DerivationValues> {
-        let Bip44Row {account, change} = sqlx::query_as(r#"
-            SELECT last_value as account, nextval('last_bip44_change') as change
-            FROM last_bip44_account
+    async fn next_account_and_address(&self) -> anyhow::Result<DerivationValues> {
+        let Bip44Row {seq_val} = sqlx::query_as(r#"
+            SELECT nextval('l2_bip44_sequence') as seq_val
         "#)
             .fetch_one(&self.pool)
             .await?;
-        Ok(DerivationValues { account: account as u32, change: change as u32 })
+
+        let (account, address) = i64_to_u32s(seq_val);
+
+        Ok(DerivationValues { account, address })
     }
+}
+
+fn i64_to_u32s(a: i64) -> (u32, u32) {
+    ((a as u64 >> 32) as u32, (a & 0xffffffff) as u32)
+}
+
+#[test]
+fn test_i64_to_u32s () {
+    assert_eq!((0, 0), i64_to_u32s(0));
+    assert_eq!((0, 1), i64_to_u32s(1));
+    assert_eq!((0, 2), i64_to_u32s(2));
+    assert_eq!((0, u32::MAX), i64_to_u32s(u32::MAX as i64));
+    assert_eq!((1, 0), i64_to_u32s(1i64 + u32::MAX as i64));
+    assert_eq!((1, 1), i64_to_u32s(2i64 + u32::MAX as i64));
 }

@@ -34,5 +34,5 @@ pub struct L2Asset {
 
     /// Number that had been used as change in PIB44 derivation,
     /// to generate the asset pubkey
-    pub pib44_change_num: u32,
+    pub pib44_address_num: u32,
 }

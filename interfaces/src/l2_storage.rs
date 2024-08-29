@@ -11,7 +11,7 @@ pub trait L2Storage {
 #[derive(Debug, PartialEq)]
 pub struct DerivationValues {
     pub account: u32,
-    pub change: u32,
+    pub address: u32,
 }
 
 /// Represents pair of increment only counters that serve as a value source
@@ -19,8 +19,6 @@ pub struct DerivationValues {
 /// See: https://solanacookbook.com/references/keypairs-and-wallets.html#how-to-restore-a-keypair-from-a-mnemonic-phrase
 #[async_trait]
 pub trait Bip44DerivationSequence {
-    /// Increments account counter
-    async fn next_account(&self) -> anyhow::Result<DerivationValues>;
-    /// Increments change counter and returns its value along with account value
-    async fn next_change(&self) -> anyhow::Result<DerivationValues>;
+    /// Returns next value of account and address
+    async fn next_account_and_address(&self) -> anyhow::Result<DerivationValues>;
 }

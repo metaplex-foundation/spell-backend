@@ -25,10 +25,9 @@ async fn test_save_fetch() {
         creator: rand_pubkey(),
         collection: None,
         authority: rand_pubkey(),
-        metadata_url: "url".to_string(),
         create_timestamp: NaiveDateTime::default(),
         pib44_account_num: 1,
-        pib44_change_num: 1,
+        pib44_address_num: 1,
     };
 
     storage.save(&asset).await.unwrap();
@@ -50,12 +49,7 @@ async fn test_bip44_sequences() {
     let sut: &dyn Bip44DerivationSequence = &L2StoragePg::new_from_url(&url, 1, 1)
         .await.unwrap();
 
-    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 1 });
-    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 2 });
-    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 3 });
-
-    assert_eq!(sut.next_account().await.unwrap(), DerivationValues { account: 2, change: 1 });
-
-    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 2, change: 2 });
-    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 2, change: 3 });
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 1 });
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 2 });
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 3 });
 }

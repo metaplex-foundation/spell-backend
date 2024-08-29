@@ -27,7 +27,7 @@ impl RpcMethodRegistrar {
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
     {
-        let method_name = Self::get_fn_name(endpoint).as_str();
+        let method_name = Self::get_fn_name(endpoint);
         let cloned_ctx = self.ctx.clone();
 
         let closure = move |_params: Params| {
@@ -38,7 +38,7 @@ impl RpcMethodRegistrar {
             }
         };
 
-        self.handler.add_method(method_name, closure);
+        self.handler.add_method(&method_name, closure);
 
         self
     }
@@ -50,14 +50,14 @@ impl RpcMethodRegistrar {
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
     {
-        let method_name = Self::get_fn_name(endpoint).as_str();
+        let method_name = Self::get_fn_name(endpoint);
 
         let closure = move |_params: Params| async move {
             _params.expect_no_params()?;
             endpoint().await
         };
 
-        self.handler.add_method(method_name, closure);
+        self.handler.add_method(&method_name, closure);
 
         self
     }
@@ -70,7 +70,7 @@ impl RpcMethodRegistrar {
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
         RequestParam: DeserializeOwned + Send + 'static,
     {
-        let method_name = Self::get_fn_name(endpoint).as_str();
+        let method_name = Self::get_fn_name(endpoint);
         let cloned_ctx = self.ctx.clone();
 
         let closure = move |_params: Params| {
@@ -78,7 +78,7 @@ impl RpcMethodRegistrar {
             async move { endpoint(_params.parse()?, cloned_ctx).await }
         };
 
-        self.handler.add_method(method_name, closure);
+        self.handler.add_method(&method_name, closure);
 
         self
     }
@@ -97,7 +97,7 @@ impl RpcMethodRegistrar {
         full_type_name
             .split("::")
             .last()
-            .unwrap_or_else(|_| panic!("Couldn't extract function name of '{full_type_name}'."))
+            .unwrap_or_else(|| panic!("Couldn't extract function name of '{full_type_name}'."))
             .to_owned()
     }
 }

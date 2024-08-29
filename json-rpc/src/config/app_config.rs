@@ -1,6 +1,8 @@
 use crate::config::app_context::AppCtx;
-use crate::config::method_builder::RpcMethodBuilder;
-use crate::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
+use crate::config::method_builder::RpcMethodRegistrar;
+use crate::endpoints::get_nft::{
+    get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner,
+};
 use crate::endpoints::health_check::health;
 use jsonrpc_core::IoHandler;
 use sqlx::postgres::PgPoolOptions;
@@ -35,13 +37,13 @@ impl AppConfig {
     }
 
     pub fn register_rpc_methods(self) -> IoHandler {
-        RpcMethodBuilder::new(AppCtx::new(self.connection_pool).arced())
-            .add_method_without_ctx_and_params("health", health)
-            .add_method("get_asset", get_asset)
-            .add_method("get_asset_batch", get_asset_batch)
-            .add_method("get_asset_by_owner", get_asset_by_owner)
-            .add_method("get_asset_by_creator", get_asset_by_creator)
-            .build()
+        RpcMethodRegistrar::new(AppCtx::new(self.connection_pool).arced())
+            .method_without_ctx_and_params(health)
+            .method(get_asset)
+            .method(get_asset_batch)
+            .method(get_asset_by_owner)
+            .method(get_asset_by_creator)
+            .finish()
     }
 
     fn read_host_and_port() -> (Ipv4Addr, u16) {

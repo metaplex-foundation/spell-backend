@@ -1,0 +1,28 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+entities = { path = "../entities"}
+interfaces = { path = "../interfaces" }
+
+anyhow = { workspace = true }
+chrono = { workspace = true }
+
+tracing = { workspace = true, features = [ "log" ] }
+
+bs58 = { workspace = true }
+
+async-trait = { workspace = true }
+tokio = { workspace = true }
+
+sqlx = { workspace = true }
+
+aws-config = { workspace = true }
+aws-types = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+
+
+[dev-dependencies]
+setup = { path = "../tests/setup" }

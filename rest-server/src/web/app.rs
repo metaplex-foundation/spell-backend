@@ -1,4 +1,4 @@
-use crate::infrastructure::config::app_config::AppConfig;
+use crate::config::app_config::AppConfig;
 use actix_web::{App, HttpServer};
 use std::io::Result;
 use tracing::info;

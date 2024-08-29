@@ -1,16 +1,16 @@
-#name: REST Server Rust CI
+#name: JSON RPC Server Rust CI
 #
 #on:
 #  push:
 #    branches:
 #      - main
 #    paths:
-#      - 'rest-server/**'
+#      - 'json-rpc/**'
 #  pull_request:
 #    branches:
 #      - main
 #    paths:
-#      - 'rest-server/**'
+#      - 'json-rpc/**'
 #
 #env:
 #  CARGO_TERM_COLOR: always
@@ -63,7 +63,7 @@
 #
 #      - name: Run Formatter (fmt)
 #        run: |
-#          cd ./rest-server
+#          cd ./json-rpc
 #          pwd
 #          cargo +nightly fmt -- --check
 #          cd ..
@@ -82,3 +82,6 @@
 #            ~/.cargo/git/db/
 #            target/
 #          key: ${{ steps.cache-cargo.outputs.cache-primary-key }}
+#
+#      - name: Unit tests
+#        run: cargo test

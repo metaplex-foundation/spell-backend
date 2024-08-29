@@ -4,7 +4,7 @@ use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
-pub fn set_up_logging() {
+pub fn set_up_logging(log_level: &str) {
     let fmt_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_thread_names(true)
@@ -12,6 +12,6 @@ pub fn set_up_logging() {
 
     tracing_subscriber::registry()
         .with(fmt_layer)
-        .with(EnvFilter::from_env("LOG_LEVEL"))
+        .with(EnvFilter::new(log_level))
         .init();
 }

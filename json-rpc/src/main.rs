@@ -8,15 +8,14 @@ use crate::logging::tracing::set_up_logging;
 use crate::rpc::app::start_up_json_rpc;
 use jsonrpc_http_server::tokio;
 use std::io::Result;
+use util::config::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv::dotenv()
-        .inspect_err(|_| eprintln!("Cannot find '.env' file!"))
-        .or_else(|_| dotenv::from_filename(".env.example"))
-        .unwrap_or_else(|_| panic!("Failed to read '{:?}' file!", ".env.example"));
+    let config_settings =
+        Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
 
-    set_up_logging();
+    set_up_logging(&config_settings.json_rpc_server.log_level);
 
-    start_up_json_rpc(AppConfig::new().await)
+    start_up_json_rpc(AppConfig::from_settings(config_settings).await).await
 }

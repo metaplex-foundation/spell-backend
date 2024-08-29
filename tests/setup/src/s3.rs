@@ -1,7 +1,7 @@
 use aws_config::{BehaviorVersion, Region};
 use testcontainers::ContainerAsync;
-use testcontainers_modules::localstack::LocalStack;
 use testcontainers::{runners::AsyncRunner, ImageExt};
+use testcontainers_modules::localstack::LocalStack;
 
 pub struct S3Container {
     node: ContainerAsync<LocalStack>,
@@ -14,9 +14,7 @@ impl S3Container {
 
         let node = container_cfg.start().await?;
 
-        Ok(S3Container {
-            node
-        })
+        Ok(S3Container { node })
     }
 
     pub async fn s3_client(&self) -> anyhow::Result<aws_sdk_s3::Client> {
@@ -38,5 +36,4 @@ impl S3Container {
 
         Ok(s3_client)
     }
-
 }

@@ -1,19 +1,18 @@
 use entities::l2::PublicKey;
 
-
 #[async_trait::async_trait]
 pub trait AssetService {
     /// Create a new L2 asset and set given authority pubkey as the created asset authority.
-    /// 
+    ///
     /// The sequence of action in the flow is following:
     /// 1) Persists the binary asset in our storage
     /// 2) Persist the NFT metadata json in our storage
     /// 3) Generate a public key derived from our keypair and use it as asset ID
     /// 4) Create a record about L2 asset in our storage
-    /// 
+    ///
     /// The owner and creator of all L2 assets is "we", i.e. HD key derived from our mnemonic.
     /// Returns a pubkey of the newly created asset.
-    /// 
+    ///
     /// ## Args:
     /// * `asset_binary` - asset file itself (image, animation, vide, etc.)
     /// * `mime` - MIME type of the asset
@@ -28,6 +27,6 @@ pub trait AssetService {
         metadata_json: &str,
         authority: PublicKey,
         name: &str,
-        collection: Option<PublicKey>
+        collection: Option<PublicKey>,
     ) -> anyhow::Result<PublicKey>;
 }

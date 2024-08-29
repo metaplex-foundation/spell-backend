@@ -1,4 +1,3 @@
-
 use entities::l2::PublicKey;
 use rand::Rng;
 

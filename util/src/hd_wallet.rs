@@ -1,4 +1,8 @@
-use solana_sdk::{derivation_path::DerivationPath, signature::{generate_seed_from_seed_phrase_and_passphrase, Keypair}, signer::SeedDerivable};
+use solana_sdk::{
+    derivation_path::DerivationPath,
+    signature::{generate_seed_from_seed_phrase_and_passphrase, Keypair},
+    signer::SeedDerivable,
+};
 
 pub struct HdWalletProducer {
     /// Seed of the masterkey.
@@ -6,8 +10,10 @@ pub struct HdWalletProducer {
 }
 
 impl HdWalletProducer {
-
-    pub fn from_seed_phrase_and_passphrase(seed_phrase: &str, passphrase: &str) -> HdWalletProducer {
+    pub fn from_seed_phrase_and_passphrase(
+        seed_phrase: &str,
+        passphrase: &str,
+    ) -> HdWalletProducer {
         let seed = generate_seed_from_seed_phrase_and_passphrase(seed_phrase, passphrase);
         HdWalletProducer { seed }
     }

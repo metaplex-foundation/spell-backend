@@ -5,12 +5,11 @@
 use pg::PgContainer;
 use s3::S3Container;
 
-
+pub mod data_gen;
 mod pg;
 mod s3;
-pub mod data_gen;
 
-pub const JSON_METADATA_S3_BUCKET: &'static str = "asset-metadata";
+pub const JSON_METADATA_S3_BUCKET: &str = "asset-metadata";
 
 pub struct TestEnvironment {
     pub pg: Option<PgContainer>,
@@ -25,10 +24,7 @@ pub struct TestEnvironmentCfg {
 
 impl TestEnvironmentCfg {
     fn with_all() -> Self {
-        TestEnvironmentCfg {
-            pg: true,
-            s3: true,
-        }
+        TestEnvironmentCfg { pg: true, s3: true }
     }
     pub fn with_pg(mut self) -> Self {
         self.pg = true;
@@ -43,7 +39,6 @@ impl TestEnvironmentCfg {
     }
 }
 
-
 impl TestEnvironment {
     pub async fn start() -> TestEnvironment {
         TestEnvironment::start_with_cfg(TestEnvironmentCfg::with_all()).await
@@ -54,7 +49,6 @@ impl TestEnvironment {
     }
 
     pub async fn start_with_cfg(cfg: TestEnvironmentCfg) -> TestEnvironment {
-
         let pg = if cfg.pg {
             Some(pg::PgContainer::run().await.unwrap())
         } else {
@@ -67,14 +61,17 @@ impl TestEnvironment {
             None
         };
 
-        let result = TestEnvironment {
-            pg, s3
-        };
+        let result = TestEnvironment { pg, s3 };
 
         // post initialization
         if cfg.s3 {
             let s3_client = result.metadata_storage_s3_client().await;
-            s3_client.create_bucket().bucket(JSON_METADATA_S3_BUCKET).send().await.unwrap();
+            s3_client
+                .create_bucket()
+                .bucket(JSON_METADATA_S3_BUCKET)
+                .send()
+                .await
+                .unwrap();
         }
 
         result
@@ -88,5 +85,4 @@ impl TestEnvironment {
     pub async fn metadata_storage_s3_client(&self) -> aws_sdk_s3::Client {
         self.s3.as_ref().unwrap().s3_client().await.unwrap()
     }
-
 }

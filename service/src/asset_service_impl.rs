@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use chrono::Local;
 use entities::l2::{L2Asset, PublicKey};
-use interfaces::{asset_service::AssetService, asset_storage::{AssetMetadataStorage, BlobStorage}, l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage}};
+use interfaces::{
+    asset_service::AssetService,
+    asset_storage::{AssetMetadataStorage, BlobStorage},
+    l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage},
+};
 use solana_sdk::signer::Signer;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
-
 
 pub struct AssetServiceImpl {
     master_pubkey: PublicKey,
@@ -18,26 +21,37 @@ pub struct AssetServiceImpl {
 
 #[async_trait::async_trait]
 impl AssetService for AssetServiceImpl {
-
-    async fn create_asset(&self, asset_binary: Vec<u8>, mime: &str, metadata_json: &str, authority: PublicKey, name: &str, collection: Option<PublicKey>) -> anyhow::Result<PublicKey> {
+    async fn create_asset(
+        &self,
+        asset_binary: Vec<u8>,
+        mime: &str,
+        metadata_json: &str,
+        authority: PublicKey,
+        name: &str,
+        collection: Option<PublicKey>,
+    ) -> anyhow::Result<PublicKey> {
         validate_metadata_contains_uris(metadata_json)?;
 
-        let DerivationValues { account, change} = self.derivation_sequence.next_change().await?;
+        let DerivationValues { account, change } = self.derivation_sequence.next_change().await?;
         let Some(keypair) = self.wallet_producer.make_hd_wallet(account, change) else {
             anyhow::bail!("Can't derive keypair");
         };
         let asset_pubkey = keypair.pubkey().to_bytes();
 
-        self.blob_storage.put_binary(&asset_pubkey, asset_binary, mime).await?;
-        self.asset_metadata_storage.put_json(&asset_pubkey, metadata_json).await?;
+        self.blob_storage
+            .put_binary(&asset_pubkey, asset_binary, mime)
+            .await?;
+        self.asset_metadata_storage
+            .put_json(&asset_pubkey, metadata_json)
+            .await?;
 
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
-            owner: self.master_pubkey, // TODO: Spell of Metagrid?
+            owner: self.master_pubkey,   // TODO: Spell of Metagrid?
             creator: self.master_pubkey, // TODO: Spell of Metagrid?
-            collection: collection,
-            authority: authority,
+            collection,
+            authority,
             create_timestamp: Local::now().naive_local(),
             pib44_account_num: account,
             pib44_change_num: change,
@@ -45,6 +59,6 @@ impl AssetService for AssetServiceImpl {
 
         self.l2_storage.save(&asset).await?;
 
-        Ok([1u8;32])
+        Ok([1u8; 32])
     }
 }

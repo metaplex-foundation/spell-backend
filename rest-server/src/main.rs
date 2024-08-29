@@ -1,18 +1,21 @@
-use crate::infrastructure::config::app_config::AppConfig;
-use crate::infrastructure::logging::tracing::set_up_logging;
-use crate::infrastructure::web::app::start_up_rest_server;
+use crate::config::app_config::AppConfig;
+use crate::logging::tracing::set_up_logging;
+use crate::web::app::start_up_rest_server;
 use std::io::Result;
+use util::config::Settings;
 
-mod infrastructure;
+pub mod auth;
+pub mod config;
+pub mod endpoints;
+pub mod logging;
+pub mod web;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
-    dotenv::dotenv()
-        .inspect_err(|_| eprintln!("Cannot find '.env' file!"))
-        .or_else(|_| dotenv::from_filename(".env.example"))
-        .unwrap_or_else(|_| panic!("Failed to read '{:?}' file!", ".env.example"));
+    let config_settings =
+        Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
 
-    set_up_logging();
+    set_up_logging(&config_settings.http_server.log_level);
 
-    start_up_rest_server(AppConfig::new().await).await
+    start_up_rest_server(AppConfig::from_settings(config_settings).await).await
 }

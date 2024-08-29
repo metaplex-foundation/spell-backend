@@ -14,7 +14,7 @@ tracing = { workspace = true }
 
 serde = { workspace = true }
 futures = { workspace = true }
-dotenv = { workspace = true }
 
 sqlx = { workspace = true }
 uuid = { workspace = true }
+util = { path = "../util" }

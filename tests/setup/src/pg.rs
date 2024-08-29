@@ -6,7 +6,6 @@ pub struct PgContainer {
 }
 
 impl PgContainer {
-
     /// Launches docker container with PostgreSQL that is prepopulated
     /// with SQL scripts from migrations directory
     pub async fn run() -> anyhow::Result<PgContainer> {
@@ -15,9 +14,7 @@ impl PgContainer {
 
         let node = container_cfg.start().await?;
 
-        Ok(PgContainer {
-            node
-        })
+        Ok(PgContainer { node })
     }
 
     /// Returns URL of PosgreSQL instance running in container
@@ -29,13 +26,14 @@ impl PgContainer {
     }
 }
 
-
-
 /// Returns path to "migrations" folder
 fn ddl_path() -> String {
-    std::env::current_dir().unwrap() // integration tests dir
-        .parent().unwrap() // workspace dir
+    std::env::current_dir()
+        .unwrap() // integration tests dir
+        .parent()
+        .unwrap() // workspace dir
         .join("migrations")
-        .to_str().unwrap()
+        .to_str()
+        .unwrap()
         .to_string()
 }

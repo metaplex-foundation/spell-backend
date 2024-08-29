@@ -1,4 +1,4 @@
-use crate::infrastructure::auth::types::ApiKeyExtractor;
+use crate::auth::types::ApiKeyExtractor;
 use actix_web::{get, HttpResponse, Responder};
 
 #[get("/health")]

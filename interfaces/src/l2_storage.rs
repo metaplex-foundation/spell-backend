@@ -4,7 +4,7 @@ use entities::l2::{L2Asset, PublicKey};
 /// Storage interfaces for L2 assets managing
 #[async_trait]
 pub trait L2Storage {
-    async fn save(&self, asset: &L2Asset) ->  anyhow::Result<()>;
+    async fn save(&self, asset: &L2Asset) -> anyhow::Result<()>;
     async fn find(&self, pubkey: &PublicKey) -> anyhow::Result<Option<L2Asset>>;
 }
 

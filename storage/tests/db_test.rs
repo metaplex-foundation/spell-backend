@@ -1,0 +1,61 @@
+
+use chrono::NaiveDateTime;
+use entities::l2::L2Asset;
+use interfaces::l2_storage::DerivationValues;
+use setup::{data_gen::rand_pubkey, TestEnvironment};
+use interfaces::l2_storage::L2Storage;
+use interfaces::l2_storage::Bip44DerivationSequence;
+use storage::l2_storage_pg::L2StoragePg;
+
+#[tokio::test]
+async fn test_save_fetch() {
+    let test_env = TestEnvironment::builder()
+        .with_pg()
+        .start().await;
+
+    let url = test_env.l2_storage_pg_url().await;
+
+    let storage = L2StoragePg::new_from_url(&url, 1, 1)
+        .await.unwrap();
+
+    let asset = L2Asset {
+        pubkey: rand_pubkey(),
+        name: "name".to_string(),
+        owner: rand_pubkey(),
+        creator: rand_pubkey(),
+        collection: None,
+        authority: rand_pubkey(),
+        metadata_url: "url".to_string(),
+        create_timestamp: NaiveDateTime::default(),
+        pib44_account_num: 1,
+        pib44_change_num: 1,
+    };
+
+    storage.save(&asset).await.unwrap();
+
+    let fetched = storage.find(&asset.pubkey).await.unwrap();
+
+    assert_eq!(fetched.unwrap(), asset);
+}
+
+
+#[tokio::test]
+async fn test_bip44_sequences() {
+    let test_env = TestEnvironment::builder()
+        .with_pg()
+        .start().await;
+
+    let url = test_env.l2_storage_pg_url().await;
+
+    let sut: &dyn Bip44DerivationSequence = &L2StoragePg::new_from_url(&url, 1, 1)
+        .await.unwrap();
+
+    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 1 });
+    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 2 });
+    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 1, change: 3 });
+
+    assert_eq!(sut.next_account().await.unwrap(), DerivationValues { account: 2, change: 1 });
+
+    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 2, change: 2 });
+    assert_eq!(sut.next_change().await.unwrap(), DerivationValues { account: 2, change: 3 });
+}

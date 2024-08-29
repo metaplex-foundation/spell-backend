@@ -1,16 +1,35 @@
 use testcontainers::{core::Mount, runners::AsyncRunner, ContainerAsync, ImageExt};
 use testcontainers_modules::postgres::Postgres;
 
-/// Launches docker container with PostgreSQL that is prepopulated
-/// with SQL scripts from migrations directory
-pub async fn run_pg() -> anyhow::Result<ContainerAsync<Postgres>> {
-    let container_cfg = testcontainers_modules::postgres::Postgres::default()
-        .with_mount(Mount::bind_mount(ddl_path(), "/docker-entrypoint-initdb.d"));
-
-    let node = container_cfg.start().await?;
-
-    Ok(node)
+pub struct PgContainer {
+    node: ContainerAsync<Postgres>,
 }
+
+impl PgContainer {
+
+    /// Launches docker container with PostgreSQL that is prepopulated
+    /// with SQL scripts from migrations directory
+    pub async fn run() -> anyhow::Result<PgContainer> {
+        let container_cfg = testcontainers_modules::postgres::Postgres::default()
+            .with_mount(Mount::bind_mount(ddl_path(), "/docker-entrypoint-initdb.d"));
+
+        let node = container_cfg.start().await?;
+
+        Ok(PgContainer {
+            node
+        })
+    }
+
+    /// Returns URL of PosgreSQL instance running in container
+    pub async fn connection_url(&self) -> String {
+        format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            self.node.get_host_port_ipv4(5432).await.unwrap()
+        )
+    }
+}
+
+
 
 /// Returns path to "migrations" folder
 fn ddl_path() -> String {

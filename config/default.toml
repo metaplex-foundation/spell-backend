@@ -1,0 +1,17 @@
+[http_server]
+port = 8080
+
+[obj_storage]
+endpoint = "http://127.0.0.1:9000"
+region = "us-east-1"
+access_key_id = "admin"
+secret_access_key = "password"
+bucket_for_json_metadata = "asset-metadata"
+
+[database]
+connection_url="postgres://postgres:postgres@localhost:5432/spell-wallet"
+min_connections = 1
+max_connections = 20
+
+[metrics]
+enabled = false

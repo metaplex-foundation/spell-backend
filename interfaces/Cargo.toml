@@ -1,0 +1,12 @@
+[package]
+name = "interfaces"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+entities = { path = "../entities"}
+anyhow = { workspace = true }
+serde = { workspace = true }
+chrono = { workspace = true }
+
+async-trait = { workspace = true }

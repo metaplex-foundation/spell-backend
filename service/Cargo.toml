@@ -1,0 +1,17 @@
+[package]
+name = "service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+entities = { path = "../entities"}
+interfaces = { path = "../interfaces"}
+util = { path = "../util"}
+
+lazy_static = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+
+chrono = { workspace = true }
+
+solana-sdk = { workspace = true }

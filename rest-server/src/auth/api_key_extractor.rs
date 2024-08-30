@@ -1,4 +1,3 @@
-use crate::auth::types::ApiKeyExtractor;
 use crate::config::app_config::AppConfig;
 use crate::config::app_context::ApiKeysProviderCtx;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized};
@@ -6,6 +5,8 @@ use actix_web::web::Data;
 use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 use tracing::info;
+
+pub struct ApiKeyExtractor;
 
 impl FromRequest for ApiKeyExtractor {
     type Error = ActixError;

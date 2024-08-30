@@ -66,7 +66,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: '${{ steps.cache-cargo.outputs.cache-primary-key }}'
+          key: ${{ steps.cache-cargo.outputs.cache-primary-key }}
 
   tests:
     name: 'Tests'
@@ -102,4 +102,4 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: '${{ steps.cache-cargo.outputs.cache-primary-key }}'
+          key: ${{ steps.cache-cargo.outputs.cache-primary-key }}

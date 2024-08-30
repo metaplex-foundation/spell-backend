@@ -1,7 +1,7 @@
-use crate::auth::types::{ApiKey, ApiKeys};
 use crate::config::app_context::ApiKeysProviderCtx;
 use crate::endpoints::health_check::{health, secured_health};
 use actix_web::web::{Data, ServiceConfig};
+use entities::api_key::{ApiKey, ApiKeys};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env::var;

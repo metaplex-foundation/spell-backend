@@ -18,3 +18,5 @@ futures = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true }
 util = { path = "../util" }
+service = { path = "../service" }
+entities = { path = "../entities" }

@@ -33,6 +33,11 @@ jobs:
           components: rustfmt
           cache: true
 
+      - name: Set default Rust toolchain
+        run: |
+          rustup show 
+          rustup override set ${{ env.RUST_STABLE_VERSION }}
+
       - name: Restore Cargo Cache
         id: cache-cargo
         uses: actions/cache@v4

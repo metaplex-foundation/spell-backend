@@ -133,11 +133,11 @@ impl RpcMethodRegistrar {
 
 #[cfg(test)]
 mod test {
-    use crate::config::method_builder::RpcMethodRegistrar;
+    use crate::config::method_registrar::RpcMethodRegistrar;
     use crate::endpoints::get_nft::get_asset;
 
     #[test]
-    fn test() {
+    fn test_extraction_of_endpoint_name() {
         let endpoint = get_asset;
         let endpoint = RpcMethodRegistrar::method_dispatch(endpoint);
 

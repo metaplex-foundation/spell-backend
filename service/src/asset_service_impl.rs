@@ -10,6 +10,7 @@ use interfaces::{
 use solana_sdk::signer::Signer;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
 
+#[derive(Clone, Debug)]
 pub struct AssetServiceImpl {
     master_pubkey: PublicKey,
     wallet_producer: HdWalletProducer,

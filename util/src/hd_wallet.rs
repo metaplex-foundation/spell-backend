@@ -4,6 +4,7 @@ use solana_sdk::{
     signer::SeedDerivable,
 };
 
+#[derive(Clone, Debug)]
 pub struct HdWalletProducer {
     /// Seed of the masterkey.
     seed: Vec<u8>,

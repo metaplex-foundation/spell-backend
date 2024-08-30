@@ -1,5 +1,5 @@
 use crate::config::app_context::AppCtx;
-use crate::config::method_builder::RpcMethodRegistrar;
+use crate::config::method_registrar::RpcMethodRegistrar;
 use crate::endpoints::get_nft::{
     get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner,
 };

@@ -4,7 +4,6 @@ use solana_sdk::{
     signer::SeedDerivable,
 };
 
-
 const SOLANA_COIN: u32 = 501;
 
 #[derive(Clone, Debug)]
@@ -32,8 +31,9 @@ impl HdWalletProducer {
 
         // Should never ever fail
         let derivation_path = DerivationPath::from_absolute_path_str(
-            format!("m/44'/{SOLANA_COIN}'/{account}'/0/{address}").as_str()
-        ).unwrap();
+            format!("m/44'/{SOLANA_COIN}'/{account}'/0/{address}").as_str(),
+        )
+        .unwrap();
 
         Keypair::from_seed_and_derivation_path(&self.seed, Some(derivation_path)).ok()
     }

@@ -22,44 +22,32 @@ pub struct AssetServiceImpl {
 
 #[async_trait::async_trait]
 impl AssetService for AssetServiceImpl {
-    async fn create_asset(
-        &self,
-        asset_binary: Vec<u8>,
-        mime: &str,
-        metadata_json: &str,
-        authority: PublicKey,
-        name: &str,
-        collection: Option<PublicKey>,
-    ) -> anyhow::Result<PublicKey> {
+
+    async fn create_asset(&self, metadata_json: &str, owner: PublicKey, creator: PublicKey, authority: PublicKey, name: &str, collection: Option<PublicKey>) -> anyhow::Result<PublicKey> {
         validate_metadata_contains_uris(metadata_json)?;
 
-        let DerivationValues { account, change } = self.derivation_sequence.next_change().await?;
-        let Some(keypair) = self.wallet_producer.make_hd_wallet(account, change) else {
+        let DerivationValues { account, address} = self.derivation_sequence.next_account_and_address().await?;
+        let Some(keypair) = self.wallet_producer.make_hd_wallet(account, address) else {
             anyhow::bail!("Can't derive keypair");
         };
         let asset_pubkey = keypair.pubkey().to_bytes();
 
-        self.blob_storage
-            .put_binary(&asset_pubkey, asset_binary, mime)
-            .await?;
-        self.asset_metadata_storage
-            .put_json(&asset_pubkey, metadata_json)
-            .await?;
+        self.asset_metadata_storage.put_json(&asset_pubkey, metadata_json).await?;
 
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
-            owner: self.master_pubkey,   // TODO: Spell of Metagrid?
-            creator: self.master_pubkey, // TODO: Spell of Metagrid?
-            collection,
-            authority,
+            owner: owner,
+            creator: creator,
+            collection: collection,
+            authority: authority,
             create_timestamp: Local::now().naive_local(),
             pib44_account_num: account,
-            pib44_change_num: change,
+            pib44_address_num: address,
         };
 
         self.l2_storage.save(&asset).await?;
 
-        Ok([1u8; 32])
+        Ok(asset_pubkey)
     }
 }

@@ -19,8 +19,7 @@ impl FromRequest for ApiKeyExtractor {
                 .inspect(|_| info!("'ApiKeysProviderCtx' extracted successfully."))
             {
                 Some(api_keys) => {
-                    let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER)
-                    else {
+                    let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER) else {
                         return ready(Err(ErrorBadRequest("No header found.")));
                     };
 
@@ -29,9 +28,7 @@ impl FromRequest for ApiKeyExtractor {
                         false => Err(ErrorUnauthorized("Invalid API key.")),
                     }
                 }
-                None => Err(ErrorInternalServerError(
-                    "Couldn't retrieve 'ApiKeysProviderCtx'!",
-                )),
+                None => Err(ErrorInternalServerError("Couldn't retrieve 'ApiKeysProviderCtx'!")),
             },
         )
     }

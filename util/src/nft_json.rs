@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-#[derive(Debug,Error)]
+#[derive(Debug, Error)]
 pub enum JsonMetadataError {
     #[error("Metadata contains no URIs")]
-    NoUri
+    NoUri,
 }
 
 /// Validates JSON metadata document

@@ -1,6 +1,7 @@
 use crate::infrastructure::auth::types::{ApiKey, ApiKeys};
 use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
 use crate::infrastructure::endpoints::health_check::{health, secured_health};
+use crate::infrastructure::endpoints::l2_assets::{create_asset, get_asset, update_asset};
 use actix_web::web::{Data, ServiceConfig};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
@@ -42,7 +43,10 @@ impl AppConfig {
 
             cfg.app_data(Data::new(api_keys_provider_ctx))
                 .service(health)
-                .service(secured_health);
+                .service(secured_health)
+                .service(create_asset)
+                .service(update_asset)
+                .service(get_asset);
         }
     }
 

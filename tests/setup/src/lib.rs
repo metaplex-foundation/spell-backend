@@ -4,13 +4,11 @@
 
 use pg::PgContainer;
 use s3::S3Container;
+use util::config::{DatabaseCfg, ObjStorageCfg};
 
-
-mod pg;
-mod s3;
 pub mod data_gen;
-
-pub const JSON_METADATA_S3_BUCKET: &'static str = "asset-metadata";
+pub mod pg;
+pub mod s3;
 
 pub struct TestEnvironment {
     pub pg: Option<PgContainer>,
@@ -24,11 +22,8 @@ pub struct TestEnvironmentCfg {
 }
 
 impl TestEnvironmentCfg {
-    fn with_all() -> Self {
-        TestEnvironmentCfg {
-            pg: true,
-            s3: true,
-        }
+    pub fn with_all() -> Self {
+        TestEnvironmentCfg { pg: true, s3: true }
     }
     pub fn with_pg(mut self) -> Self {
         self.pg = true;
@@ -43,7 +38,6 @@ impl TestEnvironmentCfg {
     }
 }
 
-
 impl TestEnvironment {
     pub async fn start() -> TestEnvironment {
         TestEnvironment::start_with_cfg(TestEnvironmentCfg::with_all()).await
@@ -54,28 +48,11 @@ impl TestEnvironment {
     }
 
     pub async fn start_with_cfg(cfg: TestEnvironmentCfg) -> TestEnvironment {
+        let pg = if cfg.pg { Some(pg::PgContainer::run().await.unwrap()) } else { None };
 
-        let pg = if cfg.pg {
-            Some(pg::PgContainer::run().await.unwrap())
-        } else {
-            None
-        };
+        let s3 = if cfg.s3 { Some(S3Container::run().await.unwrap()) } else { None };
 
-        let s3 = if cfg.s3 {
-            Some(S3Container::run().await.unwrap())
-        } else {
-            None
-        };
-
-        let result = TestEnvironment {
-            pg, s3
-        };
-
-        // post initialization
-        if cfg.s3 {
-            let s3_client = result.metadata_storage_s3_client().await;
-            s3_client.create_bucket().bucket(JSON_METADATA_S3_BUCKET).send().await.unwrap();
-        }
+        let result = TestEnvironment { pg, s3 };
 
         result
     }
@@ -86,7 +63,18 @@ impl TestEnvironment {
     }
 
     pub async fn metadata_storage_s3_client(&self) -> aws_sdk_s3::Client {
-        self.s3.as_ref().unwrap().s3_client().await.unwrap()
+        self.s3.as_ref().unwrap().s3_client().await
     }
 
+    pub async fn database_cfg(&self) -> DatabaseCfg {
+        DatabaseCfg {
+            connection_url: self.l2_storage_pg_url().await,
+            min_connections: 1,
+            max_connections: 1,
+        }
+    }
+
+    pub async fn obj_storage_cfg(&self) -> ObjStorageCfg {
+        self.s3.as_ref().unwrap().obj_storage_cfg().await
+    }
 }

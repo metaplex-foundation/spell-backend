@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-
 pub type PublicKey = [u8; 32];
 
 /// Represents L2 asset
-#[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct L2Asset {
     /// Asset uniqueue identifier
     pub pubkey: PublicKey,
@@ -20,7 +19,7 @@ pub struct L2Asset {
     pub creator: PublicKey,
 
     /// ID of collection the asset belongs to.
-    pub collection:  Option<PublicKey>,
+    pub collection: Option<PublicKey>,
 
     /// Pubkey of user who uploaded the asset.
     pub authority: PublicKey,

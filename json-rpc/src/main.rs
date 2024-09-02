@@ -17,5 +17,5 @@ async fn main() -> Result<()> {
 
     set_up_logging(&config_settings.json_rpc_server.log_level);
 
-    start_up_json_rpc(AppConfig::from_settings(config_settings).await).await
+    start_up_json_rpc(AppConfig::from_settings(config_settings)).await
 }

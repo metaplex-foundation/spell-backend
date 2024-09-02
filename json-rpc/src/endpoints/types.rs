@@ -1,7 +1,8 @@
-use jsonrpc_core::Error as JsonRpcError;
+use jsonrpc_core::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+pub type JsonRpcError = Error;
 pub type JsonRpcResponse = Result<JsonValue, JsonRpcError>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

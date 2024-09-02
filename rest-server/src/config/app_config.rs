@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use std::env::var;
 use std::net::Ipv4Addr;
 use tracing::info;
-use util::config::{EnvProfile, Settings};
+use util::config::Settings;
 
 #[derive(Clone, Debug)]
 pub struct AppConfig {
@@ -23,6 +23,11 @@ impl AppConfig {
     const API_KEY_ENV_NAME: &'static str = "app__API_KEY";
 
     pub async fn from_settings(settings: Settings) -> Self {
+        let api_keys = settings
+            .is_production_profile()
+            .then(Self::read_api_keys_from_env)
+            .unwrap_or_else(Self::mocked_api_keys);
+
         let host_and_port = (settings.json_rpc_server.host, settings.json_rpc_server.port);
 
         let connection_pool = Self::create_connection_pool(
@@ -31,12 +36,6 @@ impl AppConfig {
             settings.database.min_connections,
         )
         .await;
-
-        let api_keys = settings
-            .env
-            .eq(&EnvProfile::Prod)
-            .then(Self::read_api_keys_from_env)
-            .unwrap_or_else(Self::mocked_api_keys);
 
         Self {
             host_and_port,

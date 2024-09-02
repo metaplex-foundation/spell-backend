@@ -37,6 +37,11 @@ impl HdWalletProducer {
 
         Keypair::from_seed_and_derivation_path(&self.seed, Some(derivation_path)).ok()
     }
+
+    pub fn mocked() -> Self {
+        let seed = generate_seed_from_seed_phrase_and_passphrase("mock", "mock");
+        HdWalletProducer { seed }
+    }
 }
 
 #[test]

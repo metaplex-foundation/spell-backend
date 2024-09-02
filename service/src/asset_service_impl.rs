@@ -12,13 +12,15 @@ use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uri
 
 #[derive(Clone)]
 pub struct AssetServiceImpl {
-    master_pubkey: PublicKey,
-    wallet_producer: HdWalletProducer,
-    derivation_sequence: Arc<dyn Bip44DerivationSequence + Sync + Send>,
-    l2_storage: Arc<dyn L2Storage + Sync + Send>,
-    asset_metadata_storage: Arc<dyn AssetMetadataStorage + Sync + Send>,
-    blob_storage: Arc<dyn BlobStorage + Sync + Send>,
+    pub master_pubkey: PublicKey,
+    pub wallet_producer: HdWalletProducer,
+    pub derivation_sequence: Arc<dyn Bip44DerivationSequence + Sync + Send>,
+    pub l2_storage: Arc<dyn L2Storage + Sync + Send>,
+    pub asset_metadata_storage: Arc<dyn AssetMetadataStorage + Sync + Send>,
+    pub blob_storage: Arc<dyn BlobStorage + Sync + Send>,
 }
+
+impl AssetServiceImpl {}
 
 #[async_trait::async_trait]
 impl AssetService for AssetServiceImpl {

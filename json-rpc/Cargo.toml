@@ -12,6 +12,8 @@ tracing-subscriber = { workspace = true }
 tracing-actix-web = { workspace = true }
 tracing = { workspace = true }
 
+thiserror = { workspace = true }
+
 serde = { workspace = true }
 serde_json = { workspace = true }
 
@@ -21,3 +23,4 @@ uuid = { workspace = true }
 async-trait = { workspace = true }
 util = { path = "../util" }
 service = { path = "../service" }
+storage = { path = "../storage" }

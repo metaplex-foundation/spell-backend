@@ -107,6 +107,14 @@ impl Settings {
         Settings::load(None, None)
     }
 
+    pub fn is_production_profile(&self) -> bool {
+        self.env.eq(&EnvProfile::Prod)
+    }
+
+    pub fn is_not_production_profile(&self) -> bool {
+        !self.is_production_profile()
+    }
+
     fn load(env_name: Option<&str>, config_path: Option<&str>) -> Result<Self, ConfigError> {
         let configs_path = config_path.map(|s| s.to_string()).unwrap_or(
             std::env::var("RUN_CONFIG_DIR")

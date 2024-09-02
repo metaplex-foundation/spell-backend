@@ -5,7 +5,7 @@ use tracing::{error, info};
 
 pub async fn start_up_json_rpc(app_config: AppConfig) -> Result<()> {
     let bind_address = app_config.socket_addr();
-    let handler = app_config.register_rpc_methods();
+    let handler = app_config.register_rpc_methods().await;
 
     info!("Starting Json RPC using: '{bind_address}'.");
 

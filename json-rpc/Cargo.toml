@@ -7,6 +7,8 @@ edition = "2021"
 tokio = { workspace = true }
 jsonrpc-http-server = { workspace = true }
 jsonrpc-core = { workspace = true }
+url = { workspace = true }
+mime_guess = { workspace = true }
 
 tracing-subscriber = { workspace = true }
 tracing-actix-web = { workspace = true }
@@ -17,11 +19,13 @@ thiserror = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-
+jsonpath_lib = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true }
 
 async-trait = { workspace = true }
+
+entities = { path = "../entities"}
 util = { path = "../util" }
 service = { path = "../service" }
 storage = { path = "../storage" }

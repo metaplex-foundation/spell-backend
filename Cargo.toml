@@ -38,6 +38,9 @@ actix-web = "4.9.0"
 jsonrpc-http-server = "18.0.0"
 jsonrpc-core = "18.0.0"
 schemars = "0.8.6"
+jsonpath_lib = "0.3.0"
+url = "2.5.2"
+mime_guess = "2.0.5"
 
 # Traits
 async-trait = "0.1.66"

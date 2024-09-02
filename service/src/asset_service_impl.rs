@@ -70,11 +70,9 @@ impl AssetService for AssetServiceImpl {
     ) -> anyhow::Result<Option<L2AssetInfo>> {
         if let Some(mut asset) = self.l2_storage.find(&asset_pubkey).await? {
             let metadata = if let Some(v) = metadata_json {
-                println!("UPDATING METADA");
                 self.asset_metadata_storage.put_json(&asset_pubkey, v).await?;
                 Some(v.to_string())
             } else {
-                println!("NOT UPDATING METADA");
                 self.asset_metadata_storage.get_json(&asset_pubkey).await?
             };
             if let Some(v) = owner {
@@ -106,5 +104,9 @@ impl AssetService for AssetServiceImpl {
         let asset_op = self.l2_storage.find(&asset_pubkey).await?;
 
         Ok(asset_op.map(|asset| L2AssetInfo { asset, metadata }))
+    }
+
+    async fn fetch_metadata(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<String>> {
+        self.asset_metadata_storage.get_json(&asset_pubkey).await
     }
 }

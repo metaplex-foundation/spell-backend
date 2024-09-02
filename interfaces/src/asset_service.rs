@@ -52,4 +52,7 @@ pub trait AssetService {
     /// ## Args:
     /// * `asset_pubkey` - public key that has been generate on L2 asset creation
     async fn fetch_asset(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<L2AssetInfo>>;
+
+    /// Fetch NFT metadata JSON for given asset
+    async fn fetch_metadata(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<String>>;
 }

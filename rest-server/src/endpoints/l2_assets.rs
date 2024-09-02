@@ -14,6 +14,8 @@ use util::publickey::PublicKeyExt;
 
 use crate::web::app::AppState;
 
+const ASSET_NOT_FOUND: &str = "No asset found with given ID";
+
 /// Request object for creating an L2 asset
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAssetRequest {
@@ -156,7 +158,7 @@ pub async fn update_asset(
                     .content_type(ContentType::json())
                     .body(json!(dto).to_string())
             }
-            None => bad_request("No L2 asset found with given ID"),
+            None => bad_request(ASSET_NOT_FOUND),
         },
         Err(e) => internal_server_error(Some(e.to_string())),
     }
@@ -176,7 +178,22 @@ pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<Arc<App
                     .content_type(ContentType::json())
                     .body(json!(dto).to_string())
             }
-            None => bad_request("No L2 asset found with given ID"),
+            None => bad_request(ASSET_NOT_FOUND),
+        },
+        Err(e) => internal_server_error(Some(e.to_string())),
+    }
+}
+
+#[get("/asset/{pubkey}/metadata.json")]
+pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<Arc<AppState>>) -> impl Responder {
+    let Some(pubkey) = PublicKey::from_bs58(&asset_pubkey) else {
+        return bad_request("Invalid asset public key");
+    };
+
+    match state.asset_service.fetch_metadata(pubkey).await {
+        Ok(mayble_metadata) => match mayble_metadata {
+            Some(metadata) => HttpResponse::Ok().content_type(ContentType::json()).body(metadata),
+            None => bad_request(ASSET_NOT_FOUND),
         },
         Err(e) => internal_server_error(Some(e.to_string())),
     }

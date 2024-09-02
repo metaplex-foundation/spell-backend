@@ -8,7 +8,6 @@ entities = { path = "../entities"}
 interfaces = { path = "../interfaces"}
 util = { path = "../util"}
 
-lazy_static = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 

@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "json-rpc",
     "rest-server",
-    "rest-server",
     "interfaces",
     "storage",
     "tests/setup",

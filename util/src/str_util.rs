@@ -17,7 +17,7 @@ pub fn mask_url_passwd(url: &str) -> String {
 
 pub fn mask_creds(s: &str) -> String {
     let mut result = s.to_owned();
-    result.replace_range( 2 .. s.len(), "*".repeat(s.len()-2).as_str());
+    result.replace_range(2..s.len(), "*".repeat(s.len() - 2).as_str());
     result
 }
 

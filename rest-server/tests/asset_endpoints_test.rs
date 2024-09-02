@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::net::Ipv4Addr;
     use std::sync::Arc;
 
     use actix_web::{body::MessageBody, dev::ServiceResponse, test, web, App};
@@ -11,7 +12,7 @@ mod tests {
         web::app::create_app_state,
     };
     use setup::{TestEnvironment, TestEnvironmentCfg};
-    use util::config::Settings;
+    use util::config::{EnvProfile, JsonRpc, Settings};
     use util::{config::HttpServerCfg, publickey::PublicKeyExt};
 
     #[actix_web::test]
@@ -124,10 +125,13 @@ mod tests {
 
     async fn make_test_cfg(t_env: &TestEnvironment) -> Settings {
         Settings {
-            http_server: HttpServerCfg { port: 0 },
+            http_server: HttpServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
             database: t_env.database_cfg().await,
             obj_storage: t_env.obj_storage_cfg().await,
-            env: "it".to_string(),
+            env: EnvProfile::Local,
+            json_rpc_server: JsonRpc {
+                port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string()
+            },
         }
     }
 

@@ -12,8 +12,7 @@ use util::config::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config_settings =
-        Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
+    let config_settings = Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
 
     set_up_logging(&config_settings.json_rpc_server.log_level);
 

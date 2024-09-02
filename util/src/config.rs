@@ -1,17 +1,10 @@
 //! This module contain application configuration related functionality.
-//! 
+//!
 //! All the application configurations should be set in corresponding
 //! TOML file in `config` directory.
+use crate::str_util::{mask_creds, mask_url_passwd};
 use aws_config::{BehaviorVersion, Region};
 use config::{Config, ConfigError, Environment, File};
-
-use serde::Deserialize;
-use std::{
-    fmt,
-    path::{Path, PathBuf},
-};
-
-use crate::str_util::{mask_creds, mask_url_passwd};
 use serde::Deserialize;
 use std::net::Ipv4Addr;
 use std::{
@@ -111,7 +104,7 @@ impl fmt::Debug for DatabaseCfg {
 #[allow(unused)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
-    pub http_server: HttpServer,
+    pub http_server: HttpServerCfg,
     pub json_rpc_server: JsonRpc,
     pub obj_storage: ObjStorageCfg,
     pub database: DatabaseCfg,

@@ -280,9 +280,7 @@ pub enum PluginAuthority {
     None,
     Owner,
     UpdateAuthority,
-    Address {
-        address: String,
-    },
+    Address { address: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -327,10 +325,7 @@ pub fn parse_files_from_selector<'a>(
     }
 
     let mut actual_files: HashMap<String, File> = HashMap::new();
-    if let Some(files) = selector("$.properties.files[*]")
-        .ok()
-        .filter(|d| !d.is_empty())
-    {
+    if let Some(files) = selector("$.properties.files[*]").ok().filter(|d| !d.is_empty()) {
         for v in files.iter() {
             if v.is_object() {
                 // Some assets don't follow the standard and specifiy 'url' instead of 'uri'
@@ -392,10 +387,7 @@ pub fn parse_files_from_selector<'a>(
     (links, files)
 }
 
-pub fn track_top_level_file(
-    file_map: &mut HashMap<String, File>,
-    top_level_file: Option<&serde_json::Value>,
-) {
+pub fn track_top_level_file(file_map: &mut HashMap<String, File>, top_level_file: Option<&serde_json::Value>) {
     if top_level_file.is_some() {
         let img = top_level_file.and_then(|x| x.as_str());
         if let Some(img) = img {
@@ -408,13 +400,7 @@ pub fn track_top_level_file(
 }
 pub fn file_from_str(str: String) -> File {
     let mime = get_mime_type_from_uri(str.clone());
-    File {
-        uri: Some(str),
-        cdn_uri: None,
-        mime: Some(mime),
-        quality: None,
-        contexts: None,
-    }
+    File { uri: Some(str), cdn_uri: None, mime: Some(mime), quality: None, contexts: None }
 }
 
 pub fn to_uri(uri: String) -> Option<Url> {
@@ -478,7 +464,7 @@ impl From<(AssetExtended, Value)> for Asset {
                 vec![Group {
                     group_key: COLLECTION_GROUP_KEY.to_string(),
                     group_value: Some(entities::l2::pubkey_to_string(c)),
-                    verified: Some(true), // todo: is it?
+                    verified: Some(true),      // todo: is it?
                     collection_metadata: None, //todo: figure out the collection flow with Spell
                 }]
             }),
@@ -506,15 +492,11 @@ impl From<(AssetExtended, Value)> for Asset {
             executable: None,
             metadata_owner: None,
             rent_epoch: None,
-            plugins: Some(PluginSchemaV1{
+            plugins: Some(PluginSchemaV1 {
                 index: 0,
                 offset: 0, //todo - this is purely onchain, change to constant, when we mint some of these assets
                 authority: PluginAuthority::UpdateAuthority,
-                data: Royalties {
-                    basis_points: asset.royalty_basis_points,
-                    creators,
-                    rule_set: RuleSet::None,
-                },
+                data: Royalties { basis_points: asset.royalty_basis_points, creators, rule_set: RuleSet::None },
             }),
             unknown_plugins: None,
             mpl_core_info: None,

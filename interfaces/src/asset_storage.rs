@@ -9,11 +9,6 @@ pub trait AssetMetadataStorage {
 
 #[async_trait]
 pub trait BlobStorage {
-    async fn put_binary(
-        &self,
-        pubkey: &PublicKey,
-        bytes: Vec<u8>,
-        mime: &str,
-    ) -> anyhow::Result<()>;
+    async fn put_binary(&self, pubkey: &PublicKey, bytes: Vec<u8>, mime: &str) -> anyhow::Result<()>;
     async fn get_binary(&self, pubkey: &PublicKey) -> anyhow::Result<(Vec<u8>, String)>;
 }

@@ -1,4 +1,6 @@
+use aws_config::BehaviorVersion;
 use aws_sdk_s3::{error::SdkError, primitives::ByteStream};
+use aws_types::region::Region;
 use entities::l2::PublicKey;
 use interfaces::asset_storage::{AssetMetadataStorage, BlobStorage};
 use std::sync::Arc;
@@ -33,7 +35,8 @@ impl S3Storage {
 
         S3Storage {
             s3_client: Arc::new(aws_sdk_s3::Client::from_conf(s3_config)),
-            bucket_name: "mocked s3 storage".to_string(),
+            metadata_bucket: "mocked s3 storage".to_string(),
+            asset_bucket: "".to_string(),
         }
     }
 }

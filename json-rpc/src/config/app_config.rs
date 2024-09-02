@@ -1,8 +1,6 @@
 use crate::config::app_context::AppCtx;
 use crate::config::method_registrar::RpcMethodRegistrar;
-use crate::endpoints::get_nft::{
-    get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner,
-};
+use crate::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
 use crate::endpoints::health_check::health;
 use jsonrpc_core::IoHandler;
 use std::net::SocketAddr;
@@ -29,9 +27,6 @@ impl AppConfig {
     }
 
     pub fn socket_addr(&self) -> SocketAddr {
-        SocketAddr::new(
-            self.settings.json_rpc_server.host.into(),
-            self.settings.json_rpc_server.port,
-        )
+        SocketAddr::new(self.settings.json_rpc_server.host.into(), self.settings.json_rpc_server.port)
     }
 }

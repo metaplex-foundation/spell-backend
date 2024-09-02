@@ -4,7 +4,6 @@ use crate::endpoints::types::{
     GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcError, JsonRpcResponse,
 };
 use serde_json::json;
-use crate::endpoints::rpc_asset_models::{Asset, Ownership};
 
 pub async fn get_asset(req_params: GetAsset, ctx: ArcedAppCtx) -> JsonRpcResponse {
     let id = &req_params.id;
@@ -63,16 +62,10 @@ pub async fn get_asset_batch(_req_params: GetAssetBatch, _ctx: ArcedAppCtx) -> J
     Ok(json!("Some Assets"))
 }
 
-pub async fn get_asset_by_owner(
-    _req_params: GetAssetsByOwner,
-    _ctx: ArcedAppCtx,
-) -> JsonRpcResponse {
+pub async fn get_asset_by_owner(_req_params: GetAssetsByOwner, _ctx: ArcedAppCtx) -> JsonRpcResponse {
     Ok(json!("Some Assets"))
 }
 
-pub async fn get_asset_by_creator(
-    _req_params: GetAssetsByCreator,
-    _ctx: ArcedAppCtx,
-) -> JsonRpcResponse {
+pub async fn get_asset_by_creator(_req_params: GetAssetsByCreator, _ctx: ArcedAppCtx) -> JsonRpcResponse {
     Ok(json!("Some Assets"))
 }

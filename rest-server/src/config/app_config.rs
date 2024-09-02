@@ -1,8 +1,14 @@
 use crate::config::app_context::ApiKeysProviderCtx;
 use crate::endpoints::health_check::{health, secured_health};
+use crate::endpoints::l2_assets::{create_asset, get_asset, update_asset};
 use actix_web::web::{Data, ServiceConfig};
+use entities::api_key::{ApiKey, ApiKeys};
 use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
+use std::env::var;
 use std::net::Ipv4Addr;
+use tracing::info;
+use util::config::Settings;
 
 #[derive(Clone, Debug)]
 pub struct AppConfig {
@@ -32,8 +38,7 @@ impl AppConfig {
         )
         .await;
 
-        Self {
-        }
+        Self { host_and_port, api_keys, connection_pool }
     }
 
     pub fn host_and_port(&self) -> (Ipv4Addr, u16) {
@@ -71,17 +76,16 @@ impl AppConfig {
             .into()
     }
 
-    async fn create_connection_pool(
-        db_url: String,
-        max_size_pool: u32,
-        min_size_pool: u32,
-    ) -> PgPool {
+    async fn create_connection_pool(db_url: String, max_size_pool: u32, min_size_pool: u32) -> PgPool {
         info!(
             "Creating connection pool from: '{}', with max_size: '{}', and min_size: '{}' connections.",
             db_url, max_size_pool, min_size_pool,
         );
         PgPoolOptions::new()
+            .max_connections(max_size_pool)
+            .min_connections(min_size_pool)
             .connect(&db_url)
             .await
+            .unwrap_or_else(|e| panic!("Could not connect to db: '{}'", e))
     }
 }

@@ -4,16 +4,15 @@ use crate::web::app::start_up_rest_server;
 use std::io::Result;
 use util::config::Settings;
 
-pub mod auth;
-pub mod config;
-pub mod endpoints;
-pub mod logging;
-pub mod web;
+mod auth;
+mod config;
+mod endpoints;
+mod logging;
+mod web;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
-    let config_settings =
-        Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
+    let config_settings = Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
 
     set_up_logging(&config_settings.http_server.log_level);
 

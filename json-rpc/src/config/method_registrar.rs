@@ -16,16 +16,10 @@ pub struct RpcMethodRegistrar {
 impl RpcMethodRegistrar {
     pub fn new(ctx: ArcedAppCtx) -> Self {
         info!("Registration of RPC methods has started.");
-        Self {
-            handler: IoHandler::new(),
-            ctx,
-        }
+        Self { handler: IoHandler::new(), ctx }
     }
 
-    pub fn method_without_params<FunctionResult>(
-        mut self,
-        endpoint: fn(ArcedAppCtx) -> FunctionResult,
-    ) -> Self
+    pub fn method_without_params<FunctionResult>(mut self, endpoint: fn(ArcedAppCtx) -> FunctionResult) -> Self
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
     {
@@ -47,10 +41,7 @@ impl RpcMethodRegistrar {
         self
     }
 
-    pub fn method_without_ctx_and_params<FunctionResult>(
-        mut self,
-        endpoint: fn() -> FunctionResult,
-    ) -> Self
+    pub fn method_without_ctx_and_params<FunctionResult>(mut self, endpoint: fn() -> FunctionResult) -> Self
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
     {

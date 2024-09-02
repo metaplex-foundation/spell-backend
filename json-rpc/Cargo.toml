@@ -29,5 +29,4 @@ entities = { path = "../entities"}
 util = { path = "../util" }
 service = { path = "../service" }
 storage = { path = "../storage" }
-entities = { path = "../entities" }
 solana-sdk = { workspace = true }

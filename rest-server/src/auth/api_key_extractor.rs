@@ -1,6 +1,6 @@
-use crate::infrastructure::auth::types::ApiKeyExtractor;
-use crate::infrastructure::config::app_config::AppConfig;
-use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
+use crate::auth::types::ApiKeyExtractor;
+use crate::config::app_config::AppConfig;
+use crate::config::app_context::ApiKeysProviderCtx;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::web::Data;
 use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};
@@ -19,8 +19,7 @@ impl FromRequest for ApiKeyExtractor {
                 .inspect(|_| info!("'ApiKeysProviderCtx' extracted successfully."))
             {
                 Some(api_keys) => {
-                    let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER)
-                    else {
+                    let Some(provided_api_key) = req.head().headers.get(AppConfig::API_KEY_HEADER) else {
                         return ready(Err(ErrorBadRequest("No header found.")));
                     };
 
@@ -29,9 +28,7 @@ impl FromRequest for ApiKeyExtractor {
                         false => Err(ErrorUnauthorized("Invalid API key.")),
                     }
                 }
-                None => Err(ErrorInternalServerError(
-                    "Couldn't retrieve 'ApiKeysProviderCtx'!",
-                )),
+                None => Err(ErrorInternalServerError("Couldn't retrieve 'ApiKeysProviderCtx'!")),
             },
         )
     }

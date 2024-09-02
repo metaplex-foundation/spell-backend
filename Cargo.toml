@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+    "json-rpc",
+    "rest-server",
     "rest-server",
     "interfaces",
     "storage",
@@ -37,6 +39,9 @@ jsonrpc-http-server = "18.0.0"
 jsonrpc-core = "18.0.0"
 schemars = "0.8.6"
 utoipa = { version = "4", features = ["actix_extras"] }
+jsonpath_lib = "0.3.0"
+url = "2.5.2"
+mime_guess = "2.0.5"
 
 # Traits
 async-trait = "0.1.66"
@@ -45,7 +50,7 @@ async-trait = "0.1.66"
 # Errors, futures, helpers, tools, time, etc...
 thiserror = "1.0.40"
 futures = "0.3.30"
-thiserror = "1.0.40"
+lazy_static = "1.5"
 anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
 bs58 = "0.5"
@@ -54,7 +59,6 @@ regex = "1"
 
 # Config and env
 config = "0.14"
-
 
 
 # Aws

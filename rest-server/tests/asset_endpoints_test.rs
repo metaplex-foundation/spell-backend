@@ -2,11 +2,12 @@
 mod tests {
     use std::sync::Arc;
 
-    use actix_web::{body::MessageBody, dev::ServiceResponse, test, web, App};
+    use actix_web::{body::MessageBody, dev::ServiceResponse, http::StatusCode, test, web, App};
     use entities::l2::PublicKey;
     use rest_server::{
         endpoints::l2_assets::{
-            create_asset, get_asset, update_asset, CreateAssetRequest, L2AssetInfoResponse, UpdateAssetRequest,
+            create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, L2AssetInfoResponse,
+            UpdateAssetRequest,
         },
         web::app::create_app_state,
     };
@@ -26,7 +27,8 @@ mod tests {
                 .app_data(web::Data::new(state))
                 .service(create_asset)
                 .service(update_asset)
-                .service(get_asset),
+                .service(get_asset)
+                .service(get_metadata),
         )
         .await;
 
@@ -53,6 +55,7 @@ mod tests {
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::CREATED);
             extract_response(serv_resp)
         };
 
@@ -70,6 +73,7 @@ mod tests {
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::OK);
             extract_response(serv_resp)
         };
 
@@ -99,6 +103,7 @@ mod tests {
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::OK);
             extract_response(serv_resp)
         };
 
@@ -116,10 +121,24 @@ mod tests {
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::OK);
             extract_response(serv_resp)
         };
 
         assert_eq!(updated_asset, fetched_asset_2);
+
+        // get metadata json separately
+        let fetched_metadata = {
+            let req = test::TestRequest::get()
+                .uri(format!("/asset/{}/metadata.json", created_asset.pubkey).as_str())
+                .to_request();
+
+            let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::OK);
+            String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap()
+        };
+
+        assert_eq!(fetched_metadata, fetched_asset_2.medata_json.unwrap());
     }
 
     async fn make_test_cfg(t_env: &TestEnvironment) -> Settings {

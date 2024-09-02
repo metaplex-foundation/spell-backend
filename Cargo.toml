@@ -37,7 +37,7 @@ tracing-subscriber =  { version = "0.3.16", features = ["env-filter"] }
 actix-web = "4.9.0"
 jsonrpc-http-server = "18.0.0"
 jsonrpc-core = "18.0.0"
-
+schemars = "0.8.6"
 
 # Traits
 async-trait = "0.1.66"

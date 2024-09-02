@@ -1,9 +1,13 @@
-use crate::infrastructure::config::app_config::AppConfig;
-use crate::infrastructure::logging::tracing::set_up_logging;
-use crate::infrastructure::web::app::start_up;
-use std::io::Result;
+mod auth;
+mod config;
+mod endpoints;
+mod logging;
+mod web;
 
-mod infrastructure;
+use crate::config::app_config::AppConfig;
+use crate::logging::tracing::set_up_logging;
+use crate::web::app::start_up;
+use std::io::Result;
 
 #[actix_web::main]
 async fn main() -> Result<()> {

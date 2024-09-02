@@ -1,6 +1,6 @@
-use crate::infrastructure::auth::types::ApiKeyExtractor;
-use crate::infrastructure::config::app_config::AppConfig;
-use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
+use crate::auth::types::ApiKeyExtractor;
+use crate::config::app_config::AppConfig;
+use crate::config::app_context::ApiKeysProviderCtx;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::web::Data;
 use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};

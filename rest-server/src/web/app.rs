@@ -1,4 +1,4 @@
-use crate::infrastructure::config::app_config::AppConfig;
+use crate::config::app_config::AppConfig;
 use actix_web::{web, App, HttpServer};
 use interfaces::asset_service::AssetService;
 use service::asset_service_impl::AssetServiceImpl;

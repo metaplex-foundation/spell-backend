@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
 use util::publickey::PublicKeyExt;
 
-use crate::infrastructure::web::app::AppState;
+use crate::web::app::AppState;
 
 /// Request object for creating an L2 asset
 #[derive(Debug, Serialize, Deserialize)]

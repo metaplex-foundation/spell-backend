@@ -1,7 +1,7 @@
-use crate::infrastructure::auth::types::{ApiKey, ApiKeys};
-use crate::infrastructure::config::app_context::ApiKeysProviderCtx;
-use crate::infrastructure::endpoints::health_check::{health, secured_health};
-use crate::infrastructure::endpoints::l2_assets::{create_asset, get_asset, update_asset};
+use crate::auth::types::{ApiKey, ApiKeys};
+use crate::config::app_context::ApiKeysProviderCtx;
+use crate::endpoints::health_check::{health, secured_health};
+use crate::endpoints::l2_assets::{create_asset, get_asset, update_asset};
 use actix_web::web::{Data, ServiceConfig};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};

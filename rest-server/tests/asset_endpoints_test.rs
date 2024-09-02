@@ -4,7 +4,7 @@ mod tests {
 
     use actix_web::{body::MessageBody, dev::ServiceResponse, test, web, App};
     use entities::l2::PublicKey;
-    use rest_server::infrastructure::{
+    use rest_server::{
         endpoints::l2_assets::{
             create_asset, get_asset, update_asset, CreateAssetRequest, L2AssetInfoResponse, UpdateAssetRequest,
         },

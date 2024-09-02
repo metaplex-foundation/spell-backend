@@ -1,13 +1,8 @@
 use crate::config::app_context::ApiKeysProviderCtx;
 use crate::endpoints::health_check::{health, secured_health};
 use actix_web::web::{Data, ServiceConfig};
-use entities::api_key::{ApiKey, ApiKeys};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
-use std::env::var;
 use std::net::Ipv4Addr;
-use tracing::info;
-use util::config::Settings;
 
 #[derive(Clone, Debug)]
 pub struct AppConfig {
@@ -38,9 +33,6 @@ impl AppConfig {
         .await;
 
         Self {
-            host_and_port,
-            api_keys,
-            connection_pool,
         }
     }
 
@@ -54,6 +46,9 @@ impl AppConfig {
 
             cfg.app_data(Data::new(api_keys_provider_ctx))
                 .service(health)
+                .service(create_asset)
+                .service(update_asset)
+                .service(get_asset)
                 .service(secured_health);
         }
     }
@@ -86,10 +81,7 @@ impl AppConfig {
             db_url, max_size_pool, min_size_pool,
         );
         PgPoolOptions::new()
-            .max_connections(max_size_pool)
-            .min_connections(min_size_pool)
             .connect(&db_url)
             .await
-            .unwrap_or_else(|e| panic!("Could not connect to db: '{}'!", e))
     }
 }

@@ -14,11 +14,7 @@ pub struct L2StoragePg {
 }
 
 impl L2StoragePg {
-    pub async fn new_from_url(
-        url: &str,
-        min_connections: u32,
-        max_connections: u32,
-    ) -> anyhow::Result<L2StoragePg> {
+    pub async fn new_from_url(url: &str, min_connections: u32, max_connections: u32) -> anyhow::Result<L2StoragePg> {
         let mut options: PgConnectOptions = url.parse().unwrap();
         options.log_statements(LevelFilter::Off);
         options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));

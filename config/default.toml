@@ -15,6 +15,7 @@ access_key_id = "admin"
 secret_access_key = "password"
 bucket_for_json_metadata = "asset-metadata"
 
+
 [database]
 connection_url="postgres://postgres:postgres@localhost:5432/spell-wallet"
 min_connections = 1

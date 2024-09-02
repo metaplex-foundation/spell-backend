@@ -41,25 +41,7 @@ async fn test_bip44_sequences() {
 
     let sut: &dyn Bip44DerivationSequence = &L2StoragePg::new_from_url(&url, 1, 1).await.unwrap();
 
-    assert_eq!(
-        sut.next_account_and_address().await.unwrap(),
-        DerivationValues {
-            account: 0,
-            address: 1
-        }
-    );
-    assert_eq!(
-        sut.next_account_and_address().await.unwrap(),
-        DerivationValues {
-            account: 0,
-            address: 2
-        }
-    );
-    assert_eq!(
-        sut.next_account_and_address().await.unwrap(),
-        DerivationValues {
-            account: 0,
-            address: 3
-        }
-    );
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 1 });
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 2 });
+    assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 3 });
 }

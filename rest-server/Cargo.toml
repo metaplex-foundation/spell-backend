@@ -6,6 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+entities = { path = "../entities" }
+interfaces = { path = "../interfaces"}
+util = { path = "../util" }
+service = { path = "../service" }
+storage = { path = "../storage" }
+
 actix-web = { workspace = true }
 
 tracing-subscriber = { workspace = true }
@@ -13,10 +19,14 @@ tracing-actix-web = { workspace = true }
 tracing = { workspace = true }
 
 serde = { workspace = true }
+serde_json = { workspace = true }
 futures = { workspace = true }
+dotenv = { workspace = true }
 
+tokio = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true }
-util = { path = "../util" }
-service = { path = "../service" }
-entities = { path = "../entities" }
+bs58 = { workspace = true }
+
+[dev-dependencies]
+setup = { path = "../tests/setup" }

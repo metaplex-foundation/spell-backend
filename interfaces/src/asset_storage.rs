@@ -4,7 +4,7 @@ use entities::l2::PublicKey;
 #[async_trait]
 pub trait AssetMetadataStorage {
     async fn put_json(&self, pubkey: &PublicKey, json_metadata: &str) -> anyhow::Result<()>;
-    async fn get_json(&self, pubkey: &PublicKey) -> anyhow::Result<String>;
+    async fn get_json(&self, pubkey: &PublicKey) -> anyhow::Result<Option<String>>;
 }
 
 #[async_trait]

@@ -2,11 +2,13 @@ use std::collections::BTreeMap;
 
 use schemars::JsonSchema;
 use serde_json::Value;
+use solana_sdk::pubkey::Pubkey;
 use {
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };
-
+use entities::l2::L2Asset;
+use storage::l2_storage_pg::L2StoragePg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Quality {
@@ -73,7 +75,7 @@ impl MetadataMap {
 }
 
 // TODO sub schema support
-pub type Links = HashMap<String, serde_json::Value>;
+pub type Links = HashMap<String, Value>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Content {
@@ -256,4 +258,12 @@ pub struct Asset {
     // it's only missing the inscription field, that's not used anyway
     #[serde(skip_serializing_if = "Option::is_none")]
     pub spl20: Option<Value>,
+}
+
+impl Asset {
+    pub fn merge_with_l2_asset(mut self, l2_asset: L2Asset) -> Self {
+        self.id = Pubkey::new_from_array(l2_asset.pubkey).to_string();
+
+        todo!()
+    }
 }

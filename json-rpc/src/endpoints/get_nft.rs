@@ -4,6 +4,7 @@ use crate::endpoints::types::{
     GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcError, JsonRpcResponse,
 };
 use serde_json::json;
+use crate::endpoints::rpc_asset_models::{Asset, Ownership};
 
 pub async fn get_asset(req_params: GetAsset, ctx: ArcedAppCtx) -> JsonRpcResponse {
     let id = &req_params.id;
@@ -22,6 +23,38 @@ pub async fn get_asset(req_params: GetAsset, ctx: ArcedAppCtx) -> JsonRpcRespons
         .map_err(Into::<JsonRpcError>::into)?
         .ok_or(DasApiError::NoDataFoundError)
         .map_err(Into::<JsonRpcError>::into)?;
+
+    // let res = Asset {
+    //     interface: "".to_string(),
+    //     id: "".to_string(),
+    //     content: None,
+    //     authorities: None,
+    //     compression: None,
+    //     grouping: None,
+    //     royalty: None,
+    //     creators: None,
+    //     ownership: Ownership {
+    //         frozen: false,
+    //         delegated: false,
+    //         delegate: None,
+    //         ownership_model: OwnershipModel::Single,
+    //         owner: "".to_string(),
+    //     },
+    //     uses: None,
+    //     supply: None,
+    //     mutable: false,
+    //     burnt: false,
+    //     lamports: None,
+    //     executable: None,
+    //     metadata_owner: None,
+    //     rent_epoch: None,
+    //     plugins: None,
+    //     unknown_plugins: None,
+    //     mpl_core_info: None,
+    //     external_plugins: None,
+    //     unknown_external_plugins: None,
+    //     spl20: None,
+    // };
 
     Ok(json!(res))
 }

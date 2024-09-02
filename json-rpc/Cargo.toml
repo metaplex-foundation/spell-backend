@@ -25,3 +25,5 @@ async-trait = { workspace = true }
 util = { path = "../util" }
 service = { path = "../service" }
 storage = { path = "../storage" }
+entities = { path = "../entities" }
+solana-sdk = { workspace = true }

@@ -1,2 +1,2 @@
-[http_server]
+[rest_server]
 port = 8080

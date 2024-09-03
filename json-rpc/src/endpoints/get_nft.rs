@@ -35,7 +35,7 @@ pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> Jso
         .map(|id| PublicKey::from_bs58(id).ok_or(DasApiError::PubkeyValidationError(id.to_string())))
         .collect::<Result<Vec<PublicKey>, _>>()?;
 
-    let l2_assets = ctx
+    let id_to_l2_asset = ctx
         .asset_service
         .fetch_assets(&ids)
         .await
@@ -47,7 +47,7 @@ pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> Jso
     let mut res = Vec::with_capacity(req_params.ids.len());
 
     for id in req_params.ids {
-        match l2_assets
+        match id_to_l2_asset
             .get(&id)
             .cloned()
             .map(|l2_asset| (l2_asset.asset, l2_asset.metadata))

@@ -14,7 +14,7 @@ mod web;
 async fn main() -> Result<()> {
     let config_settings = Settings::default().unwrap_or_else(|e| panic!("Configuration failed: '{e}'!"));
 
-    set_up_logging(&config_settings.http_server.log_level);
+    set_up_logging(&config_settings.rest_server.log_level);
 
     start_up_rest_server(AppConfig::from_settings(config_settings).await).await
 }

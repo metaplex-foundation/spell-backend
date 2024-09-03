@@ -23,7 +23,7 @@ pub enum EnvProfile {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct HttpServerCfg {
+pub struct RestServerCfg {
     pub port: u16,
     pub host: Ipv4Addr,
     pub log_level: String,
@@ -104,7 +104,7 @@ impl fmt::Debug for DatabaseCfg {
 #[allow(unused)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
-    pub http_server: HttpServerCfg,
+    pub rest_server: RestServerCfg,
     pub json_rpc_server: JsonRpc,
     pub obj_storage: ObjStorageCfg,
     pub database: DatabaseCfg,

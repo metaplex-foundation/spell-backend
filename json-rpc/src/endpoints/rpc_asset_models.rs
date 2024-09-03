@@ -1,10 +1,10 @@
 use std::{cmp::Ordering, collections::BTreeMap, path::Path};
 
-use entities::l2::{self, AssetExtended, L2Asset};
+use entities::l2::{self, AssetExtended};
 use jsonpath_lib::JsonPathError;
 use mime_guess::Mime;
 use schemars::JsonSchema;
-use serde_json::Value;
+use serde_json::{json, Value};
 use tracing::warn;
 use url::Url;
 use {
@@ -64,6 +64,7 @@ impl MetadataMap {
         Self(BTreeMap::new())
     }
 
+    #[allow(dead_code)]
     pub fn inner(&self) -> &BTreeMap<String, serde_json::Value> {
         &self.0
     }
@@ -73,13 +74,14 @@ impl MetadataMap {
         self
     }
 
+    #[allow(dead_code)]
     pub fn get_item(&self, key: &str) -> Option<&serde_json::Value> {
         self.0.get(key)
     }
 }
 
 // TODO sub schema support
-pub type Links = HashMap<String, serde_json::Value>;
+pub type Links = HashMap<String, Value>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Content {
@@ -294,6 +296,7 @@ pub struct Royalties {
 pub enum RuleSet {
     None,
 }
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PluginSchemaV1 {
     pub index: u64,
@@ -312,6 +315,7 @@ pub fn safe_select<'a>(
         .as_mut()
         .and_then(|v| v.pop())
 }
+
 pub fn parse_files_from_selector<'a>(
     selector: &mut impl FnMut(&str) -> Result<Vec<&'a Value>, JsonPathError>,
 ) -> (HashMap<String, Value>, Vec<File>) {
@@ -398,6 +402,7 @@ pub fn track_top_level_file(file_map: &mut HashMap<String, File>, top_level_file
         }
     }
 }
+
 pub fn file_from_str(str: String) -> File {
     let mime = get_mime_type_from_uri(str.clone());
     File { uri: Some(str), cdn_uri: None, mime: Some(mime), quality: None, contexts: None }
@@ -417,6 +422,7 @@ pub fn get_mime_type_from_uri(uri: String) -> String {
         .and_then(get_mime)
         .map_or(default_mime_type, |m| m.to_string())
 }
+
 impl From<(AssetExtended, Value)> for Asset {
     fn from(value: (AssetExtended, Value)) -> Self {
         let (asset, metadata) = value;
@@ -441,13 +447,13 @@ impl From<(AssetExtended, Value)> for Asset {
 
         let (links, files) = parse_files_from_selector(selector);
         let creators = vec![Creator {
-            address: entities::l2::pubkey_to_string(l2_asset.creator),
+            address: l2::pubkey_to_string(l2_asset.creator),
             share: 100,
             verified: true, // todo: is it?
         }];
         Asset {
             interface: "MplCoreAsset".to_string(),
-            id: entities::l2::pubkey_to_string(l2_asset.pubkey),
+            id: l2::pubkey_to_string(l2_asset.pubkey),
             content: Some(Content {
                 schema: "https://schema.metaplex.com/nft1.0.json".to_string(),
                 json_uri: asset.metadata_uri,
@@ -463,7 +469,7 @@ impl From<(AssetExtended, Value)> for Asset {
             grouping: l2_asset.collection.map(|c| {
                 vec![Group {
                     group_key: COLLECTION_GROUP_KEY.to_string(),
-                    group_value: Some(entities::l2::pubkey_to_string(c)),
+                    group_value: Some(l2::pubkey_to_string(c)),
                     verified: Some(true),      // todo: is it?
                     collection_metadata: None, //todo: figure out the collection flow with Spell
                 }]
@@ -482,7 +488,7 @@ impl From<(AssetExtended, Value)> for Asset {
                 delegated: false,
                 delegate: None, // for core assets can come from transfer delegate plugin
                 ownership_model: OwnershipModel::Single,
-                owner: entities::l2::pubkey_to_string(l2_asset.owner),
+                owner: l2::pubkey_to_string(l2_asset.owner),
             },
             uses: None, // for core assets
             supply: None,
@@ -504,5 +510,15 @@ impl From<(AssetExtended, Value)> for Asset {
             unknown_external_plugins: None,
             spl20: None,
         }
+    }
+}
+
+impl Asset {
+    pub fn to_json(self) -> Value {
+        json!(self)
+    }
+
+    pub fn empty_json() -> Value {
+        Value::Null
     }
 }

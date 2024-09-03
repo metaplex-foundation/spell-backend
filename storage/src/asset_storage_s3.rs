@@ -80,6 +80,16 @@ impl AssetMetadataStorage for S3Storage {
             Err(e) => anyhow::bail!(e),
         }
     }
+
+    async fn get_json_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<Option<String>>> {
+        let mut res = Vec::with_capacity(pubkeys.len());
+
+        for pubkey in pubkeys {
+            res.push(self.get_json(pubkey).await?);
+        }
+
+        Ok(res)
+    }
 }
 
 #[async_trait::async_trait]

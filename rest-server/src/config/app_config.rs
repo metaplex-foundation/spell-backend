@@ -29,7 +29,7 @@ impl AppConfig {
             .then(Self::read_api_keys_from_env)
             .unwrap_or_else(Self::mocked_api_keys);
 
-        let host_and_port = (settings.json_rpc_server.host, settings.json_rpc_server.port);
+        let host_and_port = (settings.http_server.host, settings.http_server.port);
 
         let connection_pool = Self::create_connection_pool(
             settings.database.connection_url,

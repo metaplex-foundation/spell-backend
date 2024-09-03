@@ -1,4 +1,7 @@
 use crate::config::app_config::AppConfig;
+use crate::config::types::MetadataUriCreator;
+
+use interfaces::asset_service::AssetService;
 use service::asset_service_impl::AssetServiceImpl;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
@@ -12,7 +15,8 @@ pub type ArcedAppCtx = Arc<AppCtx>;
 
 #[derive(Clone)]
 pub struct AppCtx {
-    pub asset_service: AssetServiceImpl,
+    pub asset_service: Arc<dyn AssetService + Sync + Send>,
+    pub metadata_uri_base: MetadataUriCreator,
 }
 
 impl AppCtx {
@@ -28,10 +32,22 @@ impl AppCtx {
         )
         .await;
 
-        let s3_storage = match app_config.settings.is_production_profile() {
-            true => unimplemented!(),
-            false => S3Storage::mocked().await,
-        };
+        let s3_storage = S3Storage::new(
+            &app_config.settings.obj_storage.bucket_for_json_metadata,
+            &app_config.settings.obj_storage.bucket_for_binary_assets,
+            Arc::new(app_config.settings.obj_storage.s3_client().await),
+        )
+        .await;
+
+        info!("Connecting to S3 Storage: '{:?}'", app_config.settings.obj_storage.endpoint);
+        info!(
+            "Using S3 Storage bucket for assets: '{:?}'",
+            app_config.settings.obj_storage.bucket_for_binary_assets
+        );
+        info!(
+            "Using S3 Storage bucket for metadata: '{:?}'",
+            app_config.settings.obj_storage.bucket_for_json_metadata
+        );
 
         let wallet_producer = app_config
             .settings
@@ -43,13 +59,14 @@ impl AppCtx {
         let s3_storage = Arc::new(s3_storage);
 
         Self {
-            asset_service: AssetServiceImpl {
+            asset_service: Arc::new(AssetServiceImpl {
                 wallet_producer,
                 derivation_sequence: l2_storage.clone(),
                 l2_storage: l2_storage.clone(),
                 asset_metadata_storage: s3_storage.clone(),
                 blob_storage: s3_storage.clone(),
-            },
+            }),
+            metadata_uri_base: MetadataUriCreator::new(app_config.socket_addr().to_string()),
         }
     }
 

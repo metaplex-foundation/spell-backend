@@ -1,11 +1,7 @@
 use std::{i64, u32};
-
 use entities::l2::{L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions, PgRow},
-    ConnectOptions, PgPool, Row,
-};
+use sqlx::{postgres::{PgConnectOptions, PgPoolOptions, PgRow}, ConnectOptions, PgPool, Row};
 
 use tracing::log::LevelFilter;
 
@@ -106,6 +102,42 @@ impl L2Storage for L2StoragePg {
             .await?
             .map(|r| from_row(&r))
             .transpose()
+    }
+
+    async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            r#"
+                SELECT
+                    asset_pubkey,
+                    asset_name,
+                    asset_owner,
+                    asset_creator,
+                    asset_collection,
+                    asset_authority,
+                    asset_create_timestamp,
+                    pib44_account_num,
+                    pib44_address_num
+                FROM l2_assets_v1
+                WHERE asset_pubkey IN(
+            "#,
+        );
+
+        let mut separated = query_builder.separated(", ");
+        for pubkey in pubkeys {
+            separated.push_bind(pubkey);
+        }
+
+        // Complete the query
+        separated.push_unseparated(")");
+
+
+        Ok(query_builder
+            .build()
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|r| from_row(&r))
+            .collect::<Result<Vec<L2Asset>, _>>()?)
     }
 }
 

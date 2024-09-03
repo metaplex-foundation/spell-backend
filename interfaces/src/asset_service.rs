@@ -1,5 +1,6 @@
 use entities::l2::{L2Asset, PublicKey};
 
+#[derive(Debug, Clone)]
 pub struct L2AssetInfo {
     pub asset: L2Asset,
     pub metadata: Option<String>,
@@ -52,4 +53,10 @@ pub trait AssetService {
     /// ## Args:
     /// * `asset_pubkey` - public key that has been generate on L2 asset creation
     async fn fetch_asset(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<L2AssetInfo>>;
+
+    /// Fetches existing L2 assets.
+    ///
+    /// ## Args:
+    /// * `asset_pubkeys` - public keys that has been generate on L2 asset creation
+    async fn fetch_assets(&self, asset_pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2AssetInfo>>;
 }

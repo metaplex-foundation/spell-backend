@@ -14,7 +14,7 @@ pub struct RpcMethodRegistrar {
 
 #[allow(dead_code)]
 impl RpcMethodRegistrar {
-    pub fn new(ctx: ArcedAppCtx) -> Self {
+    pub fn using_ctx(ctx: ArcedAppCtx) -> Self {
         info!("Registration of RPC methods has started.");
         Self { handler: IoHandler::new(), ctx }
     }

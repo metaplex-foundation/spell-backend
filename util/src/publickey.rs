@@ -8,6 +8,9 @@ pub trait PublicKeyExt {
         Self: Sized;
 
     fn new_unique() -> Self;
+
+    fn to_string(self) -> String;
+
 }
 
 impl PublicKeyExt for PublicKey {
@@ -17,5 +20,9 @@ impl PublicKeyExt for PublicKey {
 
     fn new_unique() -> PublicKey {
         Pubkey::new_unique().to_bytes()
+    }
+
+    fn to_string(self) -> String {
+        Pubkey::new_from_array(self).to_string()
     }
 }

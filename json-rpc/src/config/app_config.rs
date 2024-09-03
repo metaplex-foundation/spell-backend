@@ -17,7 +17,7 @@ impl AppConfig {
     }
 
     pub async fn register_rpc_methods(&self) -> IoHandler {
-        RpcMethodRegistrar::new(AppCtx::new(self).await.arced())
+        RpcMethodRegistrar::using_ctx(AppCtx::new(self).await.arced())
             .method_without_ctx_and_params(health)
             .method(get_asset)
             .method(get_asset_batch)

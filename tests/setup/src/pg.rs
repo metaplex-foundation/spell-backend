@@ -7,7 +7,7 @@ pub struct PgContainer {
 
 impl PgContainer {
     /// Launches docker container with PostgreSQL that is prepopulated
-    /// with SQL scripts from migrations directory
+    /// with SQL scripts from sqlx-migrations directory
     pub async fn run() -> anyhow::Result<PgContainer> {
         let container_cfg = testcontainers_modules::postgres::Postgres::default()
             .with_mount(Mount::bind_mount(ddl_path(), "/docker-entrypoint-initdb.d"));
@@ -26,13 +26,13 @@ impl PgContainer {
     }
 }
 
-/// Returns path to "migrations" folder
+/// Returns path to "sqlx-migrations" folder
 fn ddl_path() -> String {
     std::env::current_dir()
         .unwrap() // integration tests dir
         .parent()
         .unwrap() // workspace dir
-        .join("migrations")
+        .join("../../../sqlx-migrations")
         .to_str()
         .unwrap()
         .to_string()

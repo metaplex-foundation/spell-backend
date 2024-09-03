@@ -108,4 +108,17 @@ impl AssetService for AssetServiceImpl {
 
         Ok(asset_op.map(|asset| L2AssetInfo { asset, metadata }))
     }
+
+    async fn fetch_assets(&self, asset_pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2AssetInfo>> {
+        let (asset_op, metadata) = (
+            self.l2_storage.find_batch(&asset_pubkeys).await?,
+            self.asset_metadata_storage.get_json_batch(&asset_pubkeys).await?
+        );
+
+        Ok(asset_op
+            .into_iter()
+            .zip(metadata)
+            .map(|(asset, metadata)| L2AssetInfo { asset, metadata })
+            .collect())
+    }
 }

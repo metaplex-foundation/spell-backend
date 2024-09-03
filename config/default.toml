@@ -14,6 +14,7 @@ region = "us-east-1"
 access_key_id = "admin"
 secret_access_key = "password"
 bucket_for_json_metadata = "asset-metadata"
+bucket_for_binary_assets = "binary-assets"
 
 
 [database]

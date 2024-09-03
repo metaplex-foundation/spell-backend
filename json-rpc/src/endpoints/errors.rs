@@ -12,6 +12,8 @@ pub enum DasApiError {
     PubkeyValidationError(String),
     #[error("Database Error")]
     DatabaseError,
+    #[error("Failed to parse Json metadata.")]
+    JsonMetadataParsing,
 }
 
 impl From<DasApiError> for JsonRpcError {
@@ -28,6 +30,11 @@ impl From<DasApiError> for JsonRpcError {
                 data: None,
             },
             DasApiError::DatabaseError => Self::internal_error(),
+            DasApiError::JsonMetadataParsing => Self {
+                code: ErrorCode::ParseError,
+                message: "Failed to parse Json metadata.".to_string(),
+                data: None,
+            },
         }
     }
 }

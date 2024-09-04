@@ -1,6 +1,4 @@
-use aws_config::BehaviorVersion;
 use aws_sdk_s3::{error::SdkError, primitives::ByteStream};
-use aws_types::region::Region;
 use entities::l2::PublicKey;
 use interfaces::asset_storage::{AssetMetadataStorage, BlobStorage};
 use std::sync::Arc;
@@ -20,23 +18,6 @@ impl S3Storage {
             s3_client,
             metadata_bucket: metadata_bucket.to_string(),
             asset_bucket: asset_bucket.to_string(),
-        }
-    }
-
-    pub async fn mocked() -> S3Storage {
-        let creds = aws_sdk_s3::config::Credentials::new("fake", "fake", None, None, "test");
-        let s3_config = aws_sdk_s3::config::Builder::default()
-            .behavior_version(BehaviorVersion::v2024_03_28())
-            .region(Region::new("us-east-1"))
-            .credentials_provider(creds)
-            .endpoint_url("http://127.0.0.1:3030")
-            .force_path_style(true)
-            .build();
-
-        S3Storage {
-            s3_client: Arc::new(aws_sdk_s3::Client::from_conf(s3_config)),
-            metadata_bucket: "mocked s3 storage".to_string(),
-            asset_bucket: "".to_string(),
         }
     }
 }

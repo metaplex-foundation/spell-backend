@@ -54,9 +54,9 @@ jobs:
       - name: Run Formatter (fmt)
         run: cargo +nightly fmt -- --check
 
-      # TODO: stabilize codebase and filter out stupid rules, after that turn back on
-      # - name: Run Linter (clippy)
-      #   run: cargo clippy --all-targets --all-features --workspace -- -D warnings
+
+      - name: Run Linter (clippy)
+        run: cargo clippy --all-targets --all-features --workspace -- -D warnings
 
       - name: Save Cargo Cache
         uses: actions/cache/save@v4

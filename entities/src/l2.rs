@@ -44,11 +44,7 @@ pub struct AssetExtended {
 
 impl AssetExtended {
     pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
-        Self {
-            asset,
-            metadata_uri,
-            royalty_basis_points: 0,
-        }
+        Self { asset, metadata_uri, royalty_basis_points: 0 }
     }
 }
 

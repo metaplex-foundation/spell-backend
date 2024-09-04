@@ -25,7 +25,7 @@ pub async fn get_asset(req_params: GetAsset, ctx: ArcedAppCtx) -> JsonRpcRespons
         serde_json::to_value(metadata).map_err(|_| DasApiError::JsonMetadataParsing)?,
     );
 
-    Ok(Asset::from(asset_extended_and_metadata).to_json())
+    Ok(Asset::from(asset_extended_and_metadata).into_json())
 }
 
 pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> JsonRpcResponse {
@@ -41,7 +41,7 @@ pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> Jso
         .await
         .map_err(|_| DasApiError::DatabaseError)?
         .into_iter()
-        .map(|l2_asset| (l2_asset.asset.pubkey.clone().to_string(), l2_asset))
+        .map(|l2_asset| (l2_asset.asset.pubkey.to_string(), l2_asset))
         .collect::<HashMap<String, L2AssetInfo>>();
 
     let mut res = Vec::with_capacity(req_params.ids.len());
@@ -58,7 +58,7 @@ pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> Jso
                     serde_json::to_value(metadata).map_err(|_| DasApiError::JsonMetadataParsing)?,
                 );
 
-                res.push(Asset::from(asset_extended_and_metadata).to_json())
+                res.push(Asset::from(asset_extended_and_metadata).into_json())
             }
             None => res.push(Asset::empty_json()),
         }

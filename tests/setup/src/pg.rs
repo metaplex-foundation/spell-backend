@@ -32,7 +32,7 @@ fn ddl_path() -> String {
         .unwrap() // integration tests dir
         .parent()
         .unwrap() // workspace dir
-        .join("../../../sqlx-migrations")
+        .join("sqlx-migrations")
         .to_str()
         .unwrap()
         .to_string()

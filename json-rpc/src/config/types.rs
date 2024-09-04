@@ -1,5 +1,5 @@
 #[derive(Clone)]
-pub(crate) struct MetadataUriCreator {
+pub struct MetadataUriCreator {
     base: String,
 }
 
@@ -16,7 +16,7 @@ impl MetadataUriCreator {
 #[cfg(test)]
 mod test {
     use crate::config::types::MetadataUriCreator;
-    use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+    use std::net::{Ipv4Addr, SocketAddr};
 
     #[test]
     fn test() {

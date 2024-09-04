@@ -2,9 +2,10 @@ use crate::config::app_context::ApiKeysProviderCtx;
 use crate::endpoints::health_check::{health, secured_health};
 use crate::endpoints::l2_assets::{create_asset, get_asset, get_metadata, update_asset};
 use actix_web::web::{Data, ServiceConfig};
-use entities::api_key::{ApiKey, ApiKeys};
+use entities::api_key::{ApiKey, ApiKeys, Username};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use std::env::var;
 use std::net::Ipv4Addr;
 use tracing::info;
@@ -20,8 +21,9 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub const API_KEY_HEADER: &'static str = "x-api-key";
-    const API_KEY_SEPARATOR: char = ',';
     const API_KEY_ENV_NAME: &'static str = "app__API_KEY";
+    const API_KEYS_SEPARATOR: char = ';';
+    const API_KEY_TO_NAME_SEPARATOR: char = ':';
 
     pub async fn from_settings(settings: Settings) -> Self {
         let api_keys = settings
@@ -62,18 +64,20 @@ impl AppConfig {
     fn read_api_keys_from_env() -> ApiKeys {
         var(Self::API_KEY_ENV_NAME)
             .unwrap_or_else(|_| panic!("No '{}' was provided.", Self::API_KEY_ENV_NAME))
-            .split(Self::API_KEY_SEPARATOR)
-            .map(ApiKey::new)
-            .collect::<Vec<ApiKey>>()
+            .split(Self::API_KEYS_SEPARATOR)
+            .filter_map(|api_key_name| api_key_name.split_once(Self::API_KEY_TO_NAME_SEPARATOR))
+            .map(|(api_key, name)| (ApiKey::new(api_key), Username::new(name)))
+            .collect::<HashMap<ApiKey, Username>>()
             .into()
     }
 
     fn mocked_api_keys() -> ApiKeys {
         info!("Using mocked api keys for local development: 111, 222, 333");
-        "111,222,333"
-            .split(Self::API_KEY_SEPARATOR)
-            .map(ApiKey::new)
-            .collect::<Vec<ApiKey>>()
+        "111:name1;222:name2;333:name3"
+            .split(Self::API_KEYS_SEPARATOR)
+            .filter_map(|api_key_name| api_key_name.split_once(Self::API_KEY_TO_NAME_SEPARATOR))
+            .map(|(api_key, name)| (ApiKey::new(api_key), Username::new(name)))
+            .collect::<HashMap<ApiKey, Username>>()
             .into()
     }
 

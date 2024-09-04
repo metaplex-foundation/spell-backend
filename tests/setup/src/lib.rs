@@ -4,7 +4,8 @@
 
 use pg::PgContainer;
 use s3::S3Container;
-use util::config::{DatabaseCfg, ObjStorageCfg};
+use std::net::Ipv4Addr;
+use util::config::{DatabaseCfg, EnvProfile, JsonRpc, ObjStorageCfg, RestServerCfg, Settings};
 
 pub mod data_gen;
 pub mod pg;
@@ -52,9 +53,7 @@ impl TestEnvironment {
 
         let s3 = if cfg.s3 { Some(S3Container::run().await.unwrap()) } else { None };
 
-        let result = TestEnvironment { pg, s3 };
-
-        result
+        TestEnvironment { pg, s3 }
     }
 
     /// Returns URL of PosgreSQL instance running in container
@@ -76,5 +75,15 @@ impl TestEnvironment {
 
     pub async fn obj_storage_cfg(&self) -> ObjStorageCfg {
         self.s3.as_ref().unwrap().obj_storage_cfg().await
+    }
+
+    pub async fn make_test_cfg(&self) -> Settings {
+        Settings {
+            rest_server: RestServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
+            database: self.database_cfg().await,
+            obj_storage: self.obj_storage_cfg().await,
+            env: EnvProfile::Local,
+            json_rpc_server: JsonRpc { port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
+        }
     }
 }

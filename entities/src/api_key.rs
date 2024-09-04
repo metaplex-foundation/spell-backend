@@ -1,7 +1,22 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Username(String);
+
+impl Username {
+    pub fn new<T: Into<String>>(name: T) -> Self {
+        Self(name.into())
+    }
+
+    #[allow(dead_code)]
+    pub fn inner(&self) -> String {
+        self.0.clone()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 pub struct ApiKey(String);
 
 impl ApiKey {
@@ -17,21 +32,21 @@ impl Debug for ApiKey {
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
-pub struct ApiKeys(Vec<ApiKey>);
+pub struct ApiKeys(HashMap<ApiKey, Username>);
 
 impl ApiKeys {
-    #[allow(dead_code)]
-    pub fn new<T: Iterator<Item = ApiKey>>(keys: T) -> Self {
-        Self(keys.collect())
-    }
-
-    pub fn contains_api_key(&self, provided_api_key: &impl PartialEq<String>) -> bool {
-        self.0.iter().any(|api_key| provided_api_key.eq(&api_key.0))
+    pub fn contains_api_key_then_get_username(&self, provided_api_key: &str) -> Option<Username> {
+        let provided_api_key = ApiKey::new(provided_api_key);
+        self.0
+            .contains_key(&provided_api_key)
+            .then(|| self.0.get(&provided_api_key))
+            .flatten()
+            .cloned()
     }
 }
 
-impl From<Vec<ApiKey>> for ApiKeys {
-    fn from(value: Vec<ApiKey>) -> Self {
+impl From<HashMap<ApiKey, Username>> for ApiKeys {
+    fn from(value: HashMap<ApiKey, Username>) -> Self {
         Self(value)
     }
 }

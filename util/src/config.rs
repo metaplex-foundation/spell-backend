@@ -78,9 +78,7 @@ impl ObjStorageCfg {
             .force_path_style(true) // Otherwise - localstack error: dispatch failure
             .build();
 
-        let s3_client = aws_sdk_s3::Client::from_conf(config);
-
-        s3_client
+        aws_sdk_s3::Client::from_conf(config)
     }
 }
 

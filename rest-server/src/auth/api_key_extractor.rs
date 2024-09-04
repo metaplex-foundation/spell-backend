@@ -3,10 +3,20 @@ use crate::config::app_context::ApiKeysProviderCtx;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::web::Data;
 use actix_web::{dev::Payload, Error as ActixError, FromRequest, HttpRequest};
+use entities::api_key::Username;
 use futures::future::{ready, Ready};
 use tracing::info;
 
-pub struct ApiKeyExtractor;
+#[allow(dead_code)]
+pub struct ApiKeyExtractor {
+    authorized_user: Username,
+}
+
+impl ApiKeyExtractor {
+    fn new(user: Username) -> Self {
+        Self { authorized_user: user }
+    }
+}
 
 impl FromRequest for ApiKeyExtractor {
     type Error = ActixError;
@@ -24,9 +34,13 @@ impl FromRequest for ApiKeyExtractor {
                         return ready(Err(ErrorBadRequest("No header found.")));
                     };
 
-                    match api_keys.contains_api_key(provided_api_key) {
-                        true => Ok(ApiKeyExtractor),
-                        false => Err(ErrorUnauthorized("Invalid API key.")),
+                    let Some(provided_api_key) = provided_api_key.to_str().ok() else {
+                        return ready(Err(ErrorBadRequest("Invalid header string.")));
+                    };
+
+                    match api_keys.contains_api_key_then_get_username(provided_api_key) {
+                        Some(user) => Ok(ApiKeyExtractor::new(user)),
+                        None => Err(ErrorUnauthorized("Invalid API key.")),
                     }
                 }
                 None => Err(ErrorInternalServerError("Couldn't retrieve 'ApiKeysProviderCtx'!")),

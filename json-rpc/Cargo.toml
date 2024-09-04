@@ -31,3 +31,6 @@ service = { path = "../service" }
 storage = { path = "../storage" }
 interfaces = { path = "../interfaces" }
 solana-sdk = { workspace = true }
+
+[dev-dependencies]
+setup = { path = "../tests/setup" }

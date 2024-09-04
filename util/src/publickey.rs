@@ -10,7 +10,6 @@ pub trait PublicKeyExt {
     fn new_unique() -> Self;
 
     fn to_string(self) -> String;
-
 }
 
 impl PublicKeyExt for PublicKey {

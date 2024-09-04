@@ -38,9 +38,7 @@ jsonrpc-http-server = "18.0.0"
 jsonrpc-core = "18.0.0"
 schemars = "0.8.6"
 utoipa = { version = "4", features = ["actix_extras"] }
-jsonpath_lib = "0.3.0"
-url = "2.5.2"
-mime_guess = "2.0.5"
+
 
 # Traits
 async-trait = "0.1.66"
@@ -54,6 +52,9 @@ anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
 bs58 = "0.5"
 regex = "1"
+url = "2.5.2"
+mime_guess = "2.0.5"
+jsonpath_lib = "0.3.0"
 
 
 # Config and env
@@ -73,6 +74,7 @@ solana-sdk = "1.18.22"
 # Testing
 testcontainers = "0.21"
 testcontainers-modules = "0.9"
+
 
 [patch.crates-io.curve25519-dalek]
 git = "https://github.com/solana-labs/curve25519-dalek.git"

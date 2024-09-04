@@ -1,7 +1,9 @@
-use std::{i64, u32};
 use entities::l2::{L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
-use sqlx::{postgres::{PgConnectOptions, PgPoolOptions, PgRow}, ConnectOptions, PgPool, Row};
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions, PgRow},
+    ConnectOptions, PgPool, Row,
+};
 
 use tracing::log::LevelFilter;
 
@@ -50,13 +52,13 @@ impl L2Storage for L2StoragePg {
         );
         query_builder.push_values(std::iter::once(asset), |mut builder, a| {
             builder
-                .push_bind(&a.pubkey)
+                .push_bind(a.pubkey)
                 .push_bind(&a.name)
-                .push_bind(&a.owner)
-                .push_bind(&a.creator)
-                .push_bind(&a.collection)
-                .push_bind(&a.authority)
-                .push_bind(&a.create_timestamp)
+                .push_bind(a.owner)
+                .push_bind(a.creator)
+                .push_bind(a.collection)
+                .push_bind(a.authority)
+                .push_bind(a.create_timestamp)
                 .push_bind(a.pib44_account_num as i64)
                 .push_bind(a.pib44_address_num as i64);
         });
@@ -129,7 +131,6 @@ impl L2Storage for L2StoragePg {
 
         // Complete the query
         separated.push_unseparated(")");
-
 
         Ok(query_builder
             .build()

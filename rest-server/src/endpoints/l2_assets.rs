@@ -142,11 +142,11 @@ pub async fn update_asset(
         .asset_service
         .update_asset(
             pubkey,
-            req.metadata_json.as_ref().map(|s| s.as_str()),
+            req.metadata_json.as_deref(),
             owner,
             creator,
             authority,
-            req.name.as_ref().map(|s| s.as_str()),
+            req.name.as_deref(),
             collection,
         )
         .await

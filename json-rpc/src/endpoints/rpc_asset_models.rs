@@ -514,7 +514,7 @@ impl From<(AssetExtended, Value)> for Asset {
 }
 
 impl Asset {
-    pub fn to_json(self) -> Value {
+    pub fn into_json(self) -> Value {
         json!(self)
     }
 

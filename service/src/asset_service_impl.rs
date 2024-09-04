@@ -45,10 +45,10 @@ impl AssetService for AssetServiceImpl {
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
-            owner: owner,
-            creator: creator,
-            collection: collection,
-            authority: authority,
+            owner,
+            creator,
+            collection,
+            authority,
             create_timestamp: Local::now().naive_local(),
             pib44_account_num: account,
             pib44_address_num: address,
@@ -109,8 +109,8 @@ impl AssetService for AssetServiceImpl {
 
     async fn fetch_assets(&self, asset_pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2AssetInfo>> {
         let (asset_op, metadata) = (
-            self.l2_storage.find_batch(&asset_pubkeys).await?,
-            self.asset_metadata_storage.get_json_batch(&asset_pubkeys).await?
+            self.l2_storage.find_batch(asset_pubkeys).await?,
+            self.asset_metadata_storage.get_json_batch(asset_pubkeys).await?,
         );
 
         Ok(asset_op

@@ -68,7 +68,7 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
     let asset_service = Arc::new(AssetServiceImpl {
         wallet_producer: hd_wallet_producer,
         derivation_sequence: l2_storage.clone(),
-        l2_storage: l2_storage,
+        l2_storage,
         asset_metadata_storage: obj_storage.clone(),
         blob_storage: obj_storage.clone(),
     });

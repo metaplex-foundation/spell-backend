@@ -17,7 +17,7 @@ pub struct S3Storage {
 impl S3Storage {
     pub async fn new(metadata_bucket: &str, asset_bucket: &str, s3_client: Arc<aws_sdk_s3::Client>) -> S3Storage {
         S3Storage {
-            s3_client: s3_client,
+            s3_client,
             metadata_bucket: metadata_bucket.to_string(),
             asset_bucket: asset_bucket.to_string(),
         }

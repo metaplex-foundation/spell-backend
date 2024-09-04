@@ -1,6 +1,7 @@
 use entities::l2::{L2Asset, PublicKey};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2AssetInfo {
     pub asset: L2Asset,
     pub metadata: Option<String>,
@@ -36,6 +37,7 @@ pub trait AssetService {
         collection: Option<PublicKey>,
     ) -> anyhow::Result<L2AssetInfo>;
 
+    #[allow(clippy::too_many_arguments)]
     /// Updates existing L2 asset.
     async fn update_asset(
         &self,

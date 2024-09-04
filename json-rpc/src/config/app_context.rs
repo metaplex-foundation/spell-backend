@@ -49,11 +49,7 @@ impl AppCtx {
             app_config.settings.obj_storage.bucket_for_json_metadata
         );
 
-        let wallet_producer = app_config
-            .settings
-            .is_not_production_profile()
-            .then(HdWalletProducer::mocked)
-            .unwrap_or_else(|| unimplemented!());
+        let wallet_producer = HdWalletProducer::from_seed(app_config.settings.master_key_seed());
 
         let l2_storage = Arc::new(L2StoragePg::new_from_pool(connection_pool));
         let s3_storage = Arc::new(s3_storage);
@@ -78,7 +74,7 @@ impl AppCtx {
         PgPoolOptions::new()
             .max_connections(max_size_pool)
             .min_connections(min_size_pool)
-            .connect(&db_url)
+            .connect(db_url)
             .await
             .unwrap_or_else(|e| panic!("Could not connect to db: '{}'!", e))
     }

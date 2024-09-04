@@ -23,6 +23,10 @@ impl AppConfig {
             .method(get_asset_batch)
             .method(get_asset_by_owner)
             .method(get_asset_by_creator)
+            .add_alias("getAsset", "get_asset")
+            .add_alias("getAssetBatch", "get_asset_batch")
+            .add_alias("getAssetByOwner", "get_asset_by_owner")
+            .add_alias("getAssetByCreator", "get_asset_by_creator")
             .finish()
     }
 

@@ -140,15 +140,7 @@ pub async fn update_asset(
 
     match state
         .asset_service
-        .update_asset(
-            pubkey,
-            req.metadata_json.as_deref(),
-            owner,
-            creator,
-            authority,
-            req.name.as_deref(),
-            collection,
-        )
+        .update_asset(pubkey, req.metadata_json.as_deref(), owner, creator, authority, req.name.as_deref(), collection)
         .await
     {
         Ok(mayble_l2) => match mayble_l2 {

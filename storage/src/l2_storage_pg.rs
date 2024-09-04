@@ -125,11 +125,11 @@ impl L2Storage for L2StoragePg {
         );
 
         let mut separated = query_builder.separated(", ");
+
         for pubkey in pubkeys {
             separated.push_bind(pubkey);
         }
 
-        // Complete the query
         separated.push_unseparated(")");
 
         Ok(query_builder

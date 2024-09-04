@@ -144,13 +144,11 @@ mod tests {
 
     async fn make_test_cfg(t_env: &TestEnvironment) -> Settings {
         Settings {
-            http_server: RestServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
+            rest_server: RestServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
             database: t_env.database_cfg().await,
             obj_storage: t_env.obj_storage_cfg().await,
             env: EnvProfile::Local,
-            json_rpc_server: JsonRpc {
-                port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string()
-            },
+            json_rpc_server: JsonRpc { port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
         }
     }
 

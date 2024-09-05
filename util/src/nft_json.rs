@@ -7,7 +7,7 @@ pub enum JsonMetadataError {
 }
 
 /// Validates JSON metadata document
-pub fn validate_metadata_contains_uris(_json_metadata: &str) -> std::result::Result<(), JsonMetadataError> {
+pub fn validate_metadata_contains_uris(json_metadata: &str) -> std::result::Result<(), JsonMetadataError> {
     // TODO: not forget to implement
     Ok(())
 }

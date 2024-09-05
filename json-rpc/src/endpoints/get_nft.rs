@@ -1,8 +1,10 @@
 use crate::config::app_context::ArcedAppCtx;
 use crate::endpoints::errors::DasApiError;
 use crate::endpoints::rpc_asset_models::Asset;
-use crate::endpoints::types::{GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcResponse};
-use entities::l2::{AssetExtended, PublicKey};
+use crate::endpoints::types::{
+    AssetExtended, GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcResponse,
+};
+use entities::l2::PublicKey;
 use interfaces::asset_service::L2AssetInfo;
 use serde_json::json;
 use std::collections::HashMap;

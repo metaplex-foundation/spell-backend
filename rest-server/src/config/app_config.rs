@@ -65,7 +65,11 @@ impl AppConfig {
         var(Self::API_KEY_ENV_NAME)
             .unwrap_or_else(|_| panic!("No '{}' was provided.", Self::API_KEY_ENV_NAME))
             .split(Self::API_KEYS_SEPARATOR)
-            .filter_map(|api_key_name| api_key_name.split_once(Self::API_KEY_TO_NAME_SEPARATOR))
+            .map(|api_key_name| {
+                api_key_name
+                    .split_once(Self::API_KEY_TO_NAME_SEPARATOR)
+                    .expect("No name specified for API key.")
+            })
             .map(|(api_key, name)| (ApiKey::new(api_key), Username::new(name)))
             .collect::<HashMap<ApiKey, Username>>()
             .into()

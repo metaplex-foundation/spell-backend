@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, collections::BTreeMap, path::Path};
 
-use entities::l2::{self, AssetExtended};
+use crate::endpoints::types::AssetExtended;
+use entities::l2::{self};
 use jsonpath_lib::JsonPathError;
 use mime_guess::Mime;
 use schemars::JsonSchema;

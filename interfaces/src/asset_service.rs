@@ -37,7 +37,6 @@ pub trait AssetService {
         collection: Option<PublicKey>,
     ) -> anyhow::Result<L2AssetInfo>;
 
-    #[allow(clippy::too_many_arguments)]
     /// Updates existing L2 asset.
     async fn update_asset(
         &self,

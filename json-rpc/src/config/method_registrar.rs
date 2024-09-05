@@ -6,6 +6,51 @@ use std::any::type_name;
 use std::future::Future;
 use tracing::info;
 
+/// `RpcMethodRegistrar` is a structure designed for registering JSON-RPC methods with an application context.
+/// It allows methods with different parameters to be registered
+///     and automatically determines the method names based on the function passed.
+///
+/// Unfortunately, to achieve this API, we had to limit ourselves in some cases.
+/// 1) We cannot pass different structures into the state of our application; we can only use a single one.
+/// 2) Additionally, we can only pass parameters that implement the `Serialize` and `Deserialize` traits.
+/// 3) Also, if we register a method with parameters and context,
+///  they must be passed in a strict order, with the parameter coming first and the context second.
+/// 4) Also, all methods must return a `JsonRpcResponse` type.
+///
+/// For examples of such methods implementation, refer to the `src/endpoints` folder.
+///
+/// Usage example:
+/// ```
+/// #[derive(Serialize, Deserialize)]
+/// struct RequestParam {
+///     id: u32,
+///     name: String,
+/// }
+///
+/// async fn get_user(param: RequestParam, ctx: ArcedAppCtx) -> JsonRpcResponse {
+///     let res = ctx.get_user(param.id, param.name).await?;
+///     Ok(json!(res))
+/// }
+///
+/// async fn get_status(ctx: ArcedAppCtx) -> JsonRpcResponse {
+///     Ok(json!("Service is running".to_string()))
+/// }
+///
+/// fn main() {
+///     let app_ctx = AppCtx::new(/* args */).await.arced();
+///
+///     let io_handler = RpcMethodRegistrar::using_ctx(app_ctx.clone())
+///         .method(get_user)
+///         .method_without_params(get_status)
+///         .finish();
+///
+///     ServerBuilder::new(handler)
+///         .health_api(("/health", "health"))
+///         .start_http(&(/* args */))
+///         .inspect_err(|e| error!("Failed to start http: {e}."))?
+///         .wait();
+/// }
+/// ```
 #[derive(Clone)]
 pub struct RpcMethodRegistrar {
     handler: IoHandler,
@@ -14,11 +59,13 @@ pub struct RpcMethodRegistrar {
 
 #[allow(dead_code)]
 impl RpcMethodRegistrar {
+    /// Creates a new instance of `RpcMethodRegistrar` using the provided application context (State).
     pub fn using_ctx(ctx: ArcedAppCtx) -> Self {
         info!("Registration of RPC methods has started.");
         Self { handler: IoHandler::new(), ctx }
     }
 
+    /// Registers a method that takes no parameters other than the application context.
     pub fn method_without_params<FunctionResult>(mut self, endpoint: fn(ArcedAppCtx) -> FunctionResult) -> Self
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
@@ -41,6 +88,7 @@ impl RpcMethodRegistrar {
         self
     }
 
+    /// Registers a method that takes no parameters and does not use the application context.
     pub fn method_without_ctx_and_params<FunctionResult>(mut self, endpoint: fn() -> FunctionResult) -> Self
     where
         FunctionResult: Future<Output = JsonRpcResponse> + Sized + Send + 'static,
@@ -59,6 +107,7 @@ impl RpcMethodRegistrar {
         self
     }
 
+    /// Registers a method that takes a parameter and the application context.
     pub fn method<FunctionResult, RequestParam>(
         mut self,
         endpoint: fn(RequestParam, ArcedAppCtx) -> FunctionResult,
@@ -82,20 +131,20 @@ impl RpcMethodRegistrar {
         self
     }
 
+    /// Adds an alias for a registered method.
     pub fn add_alias(mut self, alias: &str, for_method: &str) -> Self {
         info!("Adding alias '{alias}' for method '{for_method}'.");
         self.handler.add_alias(alias, for_method);
         self
     }
 
+    /// Completes the registration of methods and returns the handler containing all registered methods.
     pub fn finish(self) -> IoHandler {
         info!("Registration of RPC methods has ended.");
         self.handler
     }
 
-    /// Split the path by "::" and collect into a vector.
-    /// Then remove the last part.
-    /// Get the penultimate part.
+    /// Retrieves the method name based on the function’s path.
     fn get_endpoint_name<T>(endpoint: &T) -> String {
         let full_path = Self::get_type_full_path(endpoint);
         let mut parts = full_path.split("::").collect::<Vec<&str>>();

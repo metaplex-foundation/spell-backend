@@ -20,7 +20,7 @@ use tracing::info;
 /// For examples of such methods implementation, refer to the `src/endpoints` folder.
 ///
 /// Usage example:
-/// ```
+/// ```ignore
 /// #[derive(Serialize, Deserialize)]
 /// struct RequestParam {
 ///     id: u32,
@@ -41,7 +41,7 @@ use tracing::info;
 ///     Ok(json!(res))
 ///  }
 ///
-/// fn main() {
+/// async fn main() {
 ///     let app_ctx = AppCtx::new(/* args */).await.arced();
 ///
 ///     let io_handler = RpcMethodRegistrar::using_ctx(app_ctx.clone())

@@ -41,6 +41,7 @@ pub struct GetAssetsByCreator {
     pub cursor: Option<String>,
 }
 
+// TODO: merge with other asset types
 pub struct AssetExtended {
     pub asset: L2Asset,
     pub metadata_uri: String,
@@ -48,6 +49,7 @@ pub struct AssetExtended {
 }
 
 impl AssetExtended {
+    // TODO: use the basis points from db
     pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
         Self { asset, metadata_uri, royalty_basis_points: 0 }
     }

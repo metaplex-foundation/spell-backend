@@ -2,6 +2,7 @@ use aws_sdk_s3::{error::SdkError, primitives::ByteStream};
 use entities::l2::PublicKey;
 use interfaces::asset_storage::{AssetMetadataStorage, BlobStorage};
 use std::sync::Arc;
+use futures::future::try_join_all;
 
 const MIME_JSON: &str = "application/json";
 
@@ -63,13 +64,13 @@ impl AssetMetadataStorage for S3Storage {
     }
 
     async fn get_json_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<Option<String>>> {
-        let mut res = Vec::with_capacity(pubkeys.len());
+        let mut futures = Vec::with_capacity(pubkeys.len());
 
         for pubkey in pubkeys {
-            res.push(self.get_json(pubkey).await?);
+            futures.push(self.get_json(pubkey));
         }
 
-        Ok(res)
+        Ok(try_join_all(futures).await?)
     }
 }
 

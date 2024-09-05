@@ -1,9 +1,12 @@
 use crate::config::app_config::AppConfig;
 use actix_web::{web, App, HttpServer};
 use interfaces::asset_service::AssetService;
+use io::Result;
 use service::asset_service_impl::AssetServiceImpl;
-use std::{io::Result, sync::Arc};
-use storage::{asset_storage_s3::S3Storage, l2_storage_pg::L2StoragePg};
+use std::io;
+use std::sync::Arc;
+use storage::asset_storage_s3::S3Storage;
+use storage::l2_storage_pg::L2StoragePg;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
 use util::{
@@ -11,7 +14,7 @@ use util::{
     hd_wallet::HdWalletProducer,
 };
 
-pub async fn start_up(app_config: AppConfig) -> Result<()> {
+pub async fn start_up_rest_server(app_config: AppConfig) -> Result<()> {
     let host_and_port = app_config.host_and_port();
 
     info!("Starting server");
@@ -65,7 +68,7 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
     let asset_service = Arc::new(AssetServiceImpl {
         wallet_producer: hd_wallet_producer,
         derivation_sequence: l2_storage.clone(),
-        l2_storage: l2_storage,
+        l2_storage,
         asset_metadata_storage: obj_storage.clone(),
         blob_storage: obj_storage.clone(),
     });

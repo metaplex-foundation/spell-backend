@@ -1,0 +1,106 @@
+name: Workspace Tests and Lints
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_STABLE_VERSION: 1.79.0
+
+jobs:
+  lint_and_format:
+    name: 'Linter and Format Check'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Stable Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: '${{ env.RUST_STABLE_VERSION }}'
+          components: clippy
+          cache: true
+
+      - name: Install Nightly Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+          cache: true
+
+      - name: Set default Rust toolchain
+        run: |
+          rustup show 
+          rustup override set ${{ env.RUST_STABLE_VERSION }}
+
+      - name: Restore Cargo Cache
+        id: cache-cargo
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Run Formatter (fmt)
+        run: cargo +nightly fmt -- --check
+
+
+      - name: Run Linter (clippy)
+        run: cargo clippy --all-targets --all-features --workspace -- -D warnings
+
+      - name: Save Cargo Cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache-cargo.outputs.cache-primary-key }}
+
+  tests:
+    name: 'Tests'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Cargo Cache
+        id: cache-cargo
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Set Default Rust Toolchain
+        run: rustup override set ${{ env.RUST_STABLE_VERSION }}
+
+      - name: Run Unit Tests
+        run: cargo test --workspace
+
+      - name: Save Cargo Cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache-cargo.outputs.cache-primary-key }}

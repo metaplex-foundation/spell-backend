@@ -35,3 +35,7 @@ pub struct L2Asset {
     /// to generate the asset pubkey
     pub pib44_address_num: u32,
 }
+
+pub fn pubkey_to_string(pubkey: PublicKey) -> String {
+    bs58::encode(pubkey).into_string()
+}

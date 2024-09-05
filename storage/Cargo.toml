@@ -7,6 +7,8 @@ edition = "2021"
 entities = { path = "../entities"}
 interfaces = { path = "../interfaces" }
 
+futures = { workspace = true }
+
 anyhow = { workspace = true }
 chrono = { workspace = true }
 

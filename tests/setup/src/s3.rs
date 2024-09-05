@@ -52,9 +52,7 @@ pub async fn s3_client(node: &ContainerAsync<LocalStack>) -> aws_sdk_s3::Client 
         .force_path_style(true)
         .build();
 
-    let s3_client = aws_sdk_s3::Client::from_conf(config);
-
-    s3_client
+    aws_sdk_s3::Client::from_conf(config)
 }
 
 pub async fn obj_storage_cfg(node: &ContainerAsync<LocalStack>) -> ObjStorageCfg {

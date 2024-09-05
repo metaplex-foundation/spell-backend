@@ -6,6 +6,7 @@ use entities::l2::{L2Asset, PublicKey};
 pub trait L2Storage {
     async fn save(&self, asset: &L2Asset) -> anyhow::Result<()>;
     async fn find(&self, pubkey: &PublicKey) -> anyhow::Result<Option<L2Asset>>;
+    async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>>;
 }
 
 #[derive(Debug, PartialEq)]

@@ -2,9 +2,11 @@ use aws_sdk_s3::{error::SdkError, primitives::ByteStream};
 use entities::l2::PublicKey;
 use interfaces::asset_storage::{AssetMetadataStorage, BlobStorage};
 use std::sync::Arc;
+use futures::future::try_join_all;
 
 const MIME_JSON: &str = "application/json";
 
+#[derive(Clone, Debug)]
 pub struct S3Storage {
     s3_client: Arc<aws_sdk_s3::Client>,
     metadata_bucket: String,
@@ -14,7 +16,7 @@ pub struct S3Storage {
 impl S3Storage {
     pub async fn new(metadata_bucket: &str, asset_bucket: &str, s3_client: Arc<aws_sdk_s3::Client>) -> S3Storage {
         S3Storage {
-            s3_client: s3_client,
+            s3_client,
             metadata_bucket: metadata_bucket.to_string(),
             asset_bucket: asset_bucket.to_string(),
         }
@@ -59,6 +61,16 @@ impl AssetMetadataStorage for S3Storage {
             Err(SdkError::ServiceError(service_error)) if service_error.err().is_no_such_key() => Ok(None),
             Err(e) => anyhow::bail!(e),
         }
+    }
+
+    async fn get_json_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<Option<String>>> {
+        let mut futures = Vec::with_capacity(pubkeys.len());
+
+        for pubkey in pubkeys {
+            futures.push(self.get_json(pubkey));
+        }
+
+        Ok(try_join_all(futures).await?)
     }
 }
 

@@ -2,23 +2,38 @@
 //!
 //! All the application configurations should be set in corresponding
 //! TOML file in `config` directory.
+use crate::str_util::{mask_creds, mask_url_passwd};
 use aws_config::{BehaviorVersion, Region};
 use config::{Config, ConfigError, Environment, File};
-
 use serde::Deserialize;
+use std::net::Ipv4Addr;
 use std::{
     fmt,
     path::{Path, PathBuf},
 };
 
-use crate::str_util::{mask_creds, mask_url_passwd};
-
 const DEFAULT_CONFIG_FILE_PREFIX: &str = "config";
 const DEFAULT_CONFIG_FILE_NAME: &str = "default.toml";
 
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub enum EnvProfile {
+    Prod,
+    Local,
+    Dev,
+}
+
 #[derive(Debug, Deserialize, Clone)]
-pub struct HttpServerCfg {
+pub struct RestServerCfg {
     pub port: u16,
+    pub host: Ipv4Addr,
+    pub log_level: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JsonRpc {
+    pub port: u16,
+    pub host: Ipv4Addr,
+    pub log_level: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -63,9 +78,7 @@ impl ObjStorageCfg {
             .force_path_style(true) // Otherwise - localstack error: dispatch failure
             .build();
 
-        let s3_client = aws_sdk_s3::Client::from_conf(config);
-
-        s3_client
+        aws_sdk_s3::Client::from_conf(config)
     }
 }
 
@@ -89,10 +102,11 @@ impl fmt::Debug for DatabaseCfg {
 #[allow(unused)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
-    pub http_server: HttpServerCfg,
-    pub database: DatabaseCfg,
+    pub rest_server: RestServerCfg,
+    pub json_rpc_server: JsonRpc,
     pub obj_storage: ObjStorageCfg,
-    pub env: String,
+    pub database: DatabaseCfg,
+    pub env: EnvProfile,
 }
 
 impl Settings {
@@ -102,8 +116,17 @@ impl Settings {
 
     /// This method should be used for production.
     /// It loads application configuration based on the environment variables.
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Result<Self, ConfigError> {
         Settings::load(None, None)
+    }
+
+    pub fn is_production_profile(&self) -> bool {
+        self.env.eq(&EnvProfile::Prod)
+    }
+
+    pub fn is_not_production_profile(&self) -> bool {
+        !self.is_production_profile()
     }
 
     fn load(env_name: Option<&str>, config_path: Option<&str>) -> Result<Self, ConfigError> {

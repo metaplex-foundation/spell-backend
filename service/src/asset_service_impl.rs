@@ -10,6 +10,7 @@ use interfaces::{
 use solana_sdk::signer::Signer;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
 
+#[derive(Clone)]
 pub struct AssetServiceImpl {
     pub wallet_producer: HdWalletProducer,
     pub derivation_sequence: Arc<dyn Bip44DerivationSequence + Sync + Send>,
@@ -44,10 +45,10 @@ impl AssetService for AssetServiceImpl {
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
-            owner: owner,
-            creator: creator,
-            collection: collection,
-            authority: authority,
+            owner,
+            creator,
+            collection,
+            authority,
             create_timestamp: Local::now().naive_local(),
             pib44_account_num: account,
             pib44_address_num: address,
@@ -104,6 +105,19 @@ impl AssetService for AssetServiceImpl {
         let asset_op = self.l2_storage.find(&asset_pubkey).await?;
 
         Ok(asset_op.map(|asset| L2AssetInfo { asset, metadata }))
+    }
+
+    async fn fetch_assets(&self, asset_pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2AssetInfo>> {
+        let (asset_op, metadata) = (
+            self.l2_storage.find_batch(asset_pubkeys).await?,
+            self.asset_metadata_storage.get_json_batch(asset_pubkeys).await?,
+        );
+
+        Ok(asset_op
+            .into_iter()
+            .zip(metadata)
+            .map(|(asset, metadata)| L2AssetInfo { asset, metadata })
+            .collect())
     }
 
     async fn fetch_metadata(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<String>> {

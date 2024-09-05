@@ -1,5 +1,3 @@
-use std::{i64, u32};
-
 use entities::l2::{L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
 use sqlx::{
@@ -54,13 +52,13 @@ impl L2Storage for L2StoragePg {
         );
         query_builder.push_values(std::iter::once(asset), |mut builder, a| {
             builder
-                .push_bind(&a.pubkey)
+                .push_bind(a.pubkey)
                 .push_bind(&a.name)
-                .push_bind(&a.owner)
-                .push_bind(&a.creator)
-                .push_bind(&a.collection)
-                .push_bind(&a.authority)
-                .push_bind(&a.create_timestamp)
+                .push_bind(a.owner)
+                .push_bind(a.creator)
+                .push_bind(a.collection)
+                .push_bind(a.authority)
+                .push_bind(a.create_timestamp)
                 .push_bind(a.pib44_account_num as i64)
                 .push_bind(a.pib44_address_num as i64);
         });
@@ -106,6 +104,41 @@ impl L2Storage for L2StoragePg {
             .await?
             .map(|r| from_row(&r))
             .transpose()
+    }
+
+    async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            r#"
+                SELECT
+                    asset_pubkey,
+                    asset_name,
+                    asset_owner,
+                    asset_creator,
+                    asset_collection,
+                    asset_authority,
+                    asset_create_timestamp,
+                    pib44_account_num,
+                    pib44_address_num
+                FROM l2_assets_v1
+                WHERE asset_pubkey IN(
+            "#,
+        );
+
+        let mut separated = query_builder.separated(", ");
+
+        for pubkey in pubkeys {
+            separated.push_bind(pubkey);
+        }
+
+        separated.push_unseparated(")");
+
+        Ok(query_builder
+            .build()
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|r| from_row(&r))
+            .collect::<Result<Vec<L2Asset>, _>>()?)
     }
 }
 

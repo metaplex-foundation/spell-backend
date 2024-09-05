@@ -6,6 +6,7 @@ use solana_sdk::{
 
 const SOLANA_COIN: u32 = 501;
 
+#[derive(Clone)]
 pub struct HdWalletProducer {
     /// Seed of the masterkey.
     seed: Vec<u8>,
@@ -35,6 +36,11 @@ impl HdWalletProducer {
                 .unwrap();
 
         Keypair::from_seed_and_derivation_path(&self.seed, Some(derivation_path)).ok()
+    }
+
+    pub fn mocked() -> HdWalletProducer {
+        let seed = generate_seed_from_seed_phrase_and_passphrase("seed_phrase", "passphrase");
+        HdWalletProducer { seed }
     }
 }
 

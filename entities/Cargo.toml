@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 serde = { workspace = true }
 chrono = { workspace = true }
+bs58 = { workspace = true }

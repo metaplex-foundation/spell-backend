@@ -28,20 +28,29 @@ use tracing::info;
 /// }
 ///
 /// async fn get_user(param: RequestParam, ctx: ArcedAppCtx) -> JsonRpcResponse {
-///     let res = ctx.get_user(param.id, param.name).await?;
+///     let res = ctx.user_service.get_user(param.id, param.name).await?;
 ///     Ok(json!(res))
 /// }
 ///
-/// async fn get_status(ctx: ArcedAppCtx) -> JsonRpcResponse {
+/// async fn get_status() -> JsonRpcResponse {
 ///     Ok(json!("Service is running".to_string()))
 /// }
+///
+/// async fn get_random_number(ctx: ArcedAppCtx) -> JsonRpcResponse {
+///     let res = ctx.randomizer.get_number();
+///     Ok(json!(res))
+///  }
 ///
 /// fn main() {
 ///     let app_ctx = AppCtx::new(/* args */).await.arced();
 ///
 ///     let io_handler = RpcMethodRegistrar::using_ctx(app_ctx.clone())
 ///         .method(get_user)
-///         .method_without_params(get_status)
+///         .method_without_params(get_random_number)
+///         .method_without_ctx_and_params(get_status)
+///         .add_alias("getUser", "get_user")
+///         .add_alias("getRandomNumber", "get_random_number")
+///         .add_alias("getStatus", "get_status")
 ///         .finish();
 ///
 ///     ServerBuilder::new(handler)

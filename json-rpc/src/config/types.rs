@@ -4,8 +4,8 @@ pub struct MetadataUriCreator {
 }
 
 impl MetadataUriCreator {
-    pub fn new(base: String) -> Self {
-        Self { base }
+    pub fn new<T: Into<String>>(base: T) -> Self {
+        Self { base: base.into() }
     }
 
     pub fn get_metadata_uri_for_key(&self, public_key: &str) -> String {

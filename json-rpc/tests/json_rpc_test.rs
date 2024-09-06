@@ -1,67 +1,58 @@
 mod utils;
 
-use crate::utils::{create_asset, CreateAssetRequest};
+use crate::utils::{
+    create_asset, create_assets_with_same_owner_requests, create_different_assets_requests, CreateAssetRequest,
+};
 use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_config::AppConfig;
 use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::endpoints::errors::DasApiError;
-use json_rpc::endpoints::get_nft::{get_asset, get_asset_batch};
+use json_rpc::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_owner};
 use json_rpc::endpoints::rpc_asset_models::Asset;
-use json_rpc::endpoints::types::{GetAsset, GetAssetBatch};
+use json_rpc::endpoints::types::{
+    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner,
+};
+use json_rpc::endpoints::DEFAULT_LIMIT_FOR_PAGE;
 use serde_json::Value;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
 
-fn create_asset_requests() -> Vec<CreateAssetRequest> {
-    vec![
-        CreateAssetRequest {
-            name: "ArtPieceOne".to_string(),
-            metadata_json: r#"{"description": "First NFT", "attributes": {"rarity": "rare"}}"#.to_string(),
-            owner: "5HueWz2D9f8yjXAx8eb6WY8ocE2Fy6smAt1NkJ39kF9z".to_string(),
-            creator: "7YmM7NUj9wFmAkT4mJ2LD6yyYHtKBu9qMEfF7cX5mH9J".to_string(),
-            authority: "3JzRkTrzYa1ZFbVRd2kVy5YoAUp4XCN8UNW5NTR4jMgP".to_string(),
-            collection: None,
-        },
-        CreateAssetRequest {
-            name: "DigitalCollectible".to_string(),
-            metadata_json: r#"{"description": "Exclusive collectible", "attributes": {"series": "limited"}}"#
-                .to_string(),
-            owner: "8QzJK3WYaZBfX9qf9XJe8Phc7xZ8yz6kC8QzTfPyLfPb".to_string(),
-            creator: "4VfFHrM7vZYg5Ezm8YQVBr9N7vHj3DFJLqPh2Qj9L9Tp".to_string(),
-            authority: "9UuKzN5b2mVz9xVh8qK3Px7yYoVs8XVQfF2YkHp4jMcK".to_string(),
-            collection: None,
-        },
-        CreateAssetRequest {
-            name: "GamingAvatar".to_string(),
-            metadata_json: r#"{"description": "Avatar for gaming", "attributes": {"level": 5}}"#.to_string(),
-            owner: "2YhMfS7oMv2gV8hB3kJ8PmZbW6zQmLq5rK1TrF1yNq7Z".to_string(),
-            creator: "3RfNrQk8zDfX5GvH9pV7cPdT3hWj2Ff8VNpF8Xm8PfJk".to_string(),
-            authority: "6TpLpS8b2cZk3mZk8qW5Pc6yJoVt8XVXrK3XrF2YkNtK".to_string(),
-            collection: None,
-        },
-    ]
-}
+async fn fill_database_with_test_data(
+    app_ctx: ArcedAppCtx,
+    asset_creation_strategy: fn() -> Vec<CreateAssetRequest>,
+) -> Vec<L2AssetInfo> {
+    let requests_for_asset_creation = asset_creation_strategy();
+    let mut filled_data_from_db = Vec::with_capacity(requests_for_asset_creation.len());
 
-async fn fill_database_with_test_data(app_ctx: ArcedAppCtx) -> Vec<L2AssetInfo> {
-    let create_assets_requests = create_asset_requests();
-    let mut res = Vec::with_capacity(create_assets_requests.len());
-
-    for asset_req in create_assets_requests {
+    for asset_req in requests_for_asset_creation {
         let created_assets = create_asset(asset_req, app_ctx.clone())
             .await
             .unwrap_or_else(|e| panic!("Cannot create asset: {e}!"));
         let created_asset =
             serde_json::from_value(created_assets).unwrap_or_else(|e| panic!("Cannot serialize L2AssetInfo: {e}!"));
 
-        res.push(created_asset)
+        filled_data_from_db.push(created_asset)
     }
 
-    res
+    filled_data_from_db
 }
 
 fn form_asset_json_uri(pubkey: &str) -> String {
-    format!("127.0.0.1:8081/asset/{pubkey}/metadata.json")
+    format!("127.0.0.1:8080/asset/{pubkey}/metadata.json")
+}
+
+fn extract_asset_name_from_das_asset(asset: Asset) -> String {
+    serde_json::from_value(
+        asset
+            .content
+            .expect("Content should be present")
+            .metadata
+            .get_item("name")
+            .expect("Content should be present")
+            .clone(),
+    )
+    .expect("Cannot call 'from_value'!")
 }
 
 #[tokio::test]
@@ -71,7 +62,7 @@ async fn get_single_asset_positive() {
         .await
         .arced();
 
-    let assets_data_in_db = fill_database_with_test_data(app_ctx.clone()).await;
+    let assets_data_in_db = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests).await;
 
     for asset in assets_data_in_db {
         let expected_asset_pubkey = asset.asset.pubkey.to_string();
@@ -143,7 +134,7 @@ async fn get_asset_batch_positive() {
         .await
         .arced();
 
-    let assets_pubkeys_data_in_db = fill_database_with_test_data(app_ctx.clone())
+    let assets_pubkeys_data_in_db = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests)
         .await
         .into_iter()
         .map(|asset| asset.asset.pubkey.to_string())
@@ -175,7 +166,7 @@ async fn get_asset_batch_positive_with_non_existing_key() {
         .await
         .arced();
 
-    let mut pubkeys_for_request = fill_database_with_test_data(app_ctx.clone())
+    let mut pubkeys_for_request = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests)
         .await
         .into_iter()
         .map(|asset| asset.asset.pubkey.to_string())
@@ -210,4 +201,173 @@ async fn get_asset_batch_positive_with_non_existing_key() {
         let actual_asset_json_uri = form_asset_json_uri(&actual_pubkey);
         assert_eq!(expected_asset_json_uri, actual_asset_json_uri);
     }
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_sorting_by_created_date_desc() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests).await;
+
+    // Since we created assets in order from 1 to N and sort them by DESC then the result should be from N to 1.
+    // Using name field for simplicity.
+    let expected_order_of_assets_by_name = data_from_db
+        .iter()
+        .map(|asset| asset.asset.name.clone())
+        .rev()
+        .collect::<Vec<String>>();
+
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+
+    let request_params = GetAssetsByOwner {
+        owner_address: owner_pubkey.to_string(),
+        sort_by: Some(AssetSorting { sort_by: AssetSortBy::Created, sort_direction: Some(AssetSortDirection::Desc) }),
+        limit: None,
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let actual_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let actual_res = serde_json::from_value::<AssetList>(actual_res).expect("Failed serialize DAO assets..");
+
+    assert!(actual_res.limit.eq(&DEFAULT_LIMIT_FOR_PAGE));
+
+    let actual_res = actual_res
+        .items
+        .into_iter()
+        .map(extract_asset_name_from_das_asset)
+        .collect::<Vec<String>>();
+
+    assert_eq!(actual_res, expected_order_of_assets_by_name);
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_sorting_by_created_date_asc() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests).await;
+
+    // Since we created assets in order from 1 to N and sort them by ASC then the result should be from 1 to N.
+    // Using name field for simplicity.
+    let expected_order_of_assets_by_name = data_from_db
+        .iter()
+        .map(|asset| asset.asset.name.clone())
+        .collect::<Vec<String>>();
+
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+
+    let request_params = GetAssetsByOwner {
+        owner_address: owner_pubkey.to_string(),
+        sort_by: Some(AssetSorting { sort_by: AssetSortBy::Created, sort_direction: Some(AssetSortDirection::Asc) }),
+        limit: None,
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let actual_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let actual_res = serde_json::from_value::<AssetList>(actual_res).expect("Failed serialize DAO assets..");
+
+    assert!(actual_res.limit.eq(&DEFAULT_LIMIT_FOR_PAGE));
+
+    let actual_res = actual_res
+        .items
+        .into_iter()
+        .map(extract_asset_name_from_das_asset)
+        .collect::<Vec<String>>();
+
+    assert_eq!(actual_res, expected_order_of_assets_by_name);
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_with_limit_and_sorting_by_creation_data_desc() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests).await;
+
+    let limit = 3;
+
+    // Since we created assets in order from 1 to N and sort them by DESC then the result should be from N to 1.
+    // Using name field for simplicity.
+    // Taking only first 3 items after reversing because of limit test.
+    let expected_order_of_assets_by_name = data_from_db
+        .iter()
+        .map(|asset| asset.asset.name.clone())
+        .rev()
+        .take(limit)
+        .collect::<Vec<String>>();
+
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+
+    let request_params = GetAssetsByOwner {
+        owner_address: owner_pubkey.to_string(),
+        sort_by: Some(AssetSorting { sort_by: AssetSortBy::Created, sort_direction: Some(AssetSortDirection::Desc) }),
+        limit: Some(limit as u32),
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let actual_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let actual_res = serde_json::from_value::<AssetList>(actual_res).expect("Failed serialize DAO assets..");
+
+    assert!(actual_res.limit.eq(&(limit as u32)));
+    assert!(actual_res.total.eq(&(limit as u32)));
+    assert!(actual_res.items.len().eq(&limit));
+
+    let actual_res = actual_res
+        .items
+        .into_iter()
+        .map(extract_asset_name_from_das_asset)
+        .collect::<Vec<String>>();
+
+    assert_eq!(actual_res, expected_order_of_assets_by_name);
+}
+
+#[tokio::test]
+async fn get_assets_by_non_existent_owner() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let non_existent_owner_pubkey = Pubkey::new_unique();
+
+    let request_params = GetAssetsByOwner {
+        owner_address: non_existent_owner_pubkey.to_string(),
+        sort_by: Some(AssetSorting { sort_by: AssetSortBy::Created, sort_direction: Some(AssetSortDirection::Desc) }),
+        limit: None,
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let actual_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let actual_res = serde_json::from_value::<AssetList>(actual_res).expect("Failed serialize DAO assets..");
+
+    assert!(actual_res.total.eq(&0));
+    assert!(actual_res.limit.eq(&DEFAULT_LIMIT_FOR_PAGE));
+    assert!(actual_res.items.is_empty());
 }

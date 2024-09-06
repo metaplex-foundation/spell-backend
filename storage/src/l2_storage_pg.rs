@@ -1,10 +1,9 @@
-use entities::l2::{L2Asset, PublicKey};
+use entities::l2::{AssetSortBy, AssetSorting, L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgRow},
     ConnectOptions, PgPool, Row,
 };
-
 use tracing::log::LevelFilter;
 
 pub struct L2StoragePg {
@@ -131,6 +130,54 @@ impl L2Storage for L2StoragePg {
         }
 
         separated.push_unseparated(")");
+
+        Ok(query_builder
+            .build()
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|r| from_row(&r))
+            .collect::<Result<Vec<L2Asset>, _>>()?)
+    }
+
+    async fn find_by_owner(
+        &self,
+        owner_pubkey: &PublicKey,
+        sorting: AssetSorting,
+        limit: u32,
+    ) -> anyhow::Result<Vec<L2Asset>> {
+        let sort = {
+            let sorting_by = match sorting.sort_by {
+                AssetSortBy::Created => "asset_create_timestamp",
+                AssetSortBy::Updated => todo!(),
+            }
+            .to_string();
+            let sort_direction = sorting.sort_direction.to_string();
+
+            format!(" ORDER BY {sorting_by} {sort_direction} ")
+        };
+        let limit = format!(" LIMIT {limit} ");
+
+        let mut query_builder = sqlx::QueryBuilder::new(
+            r#"
+                SELECT
+                    asset_pubkey,
+                    asset_name,
+                    asset_owner,
+                    asset_creator,
+                    asset_collection,
+                    asset_authority,
+                    asset_create_timestamp,
+                    pib44_account_num,
+                    pib44_address_num
+                FROM l2_assets_v1
+                WHERE asset_owner =
+            "#,
+        );
+
+        query_builder.push_bind(owner_pubkey);
+        query_builder.push(sort);
+        query_builder.push(limit);
 
         Ok(query_builder
             .build()

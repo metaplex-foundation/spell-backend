@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::Local;
-use entities::l2::{L2Asset, PublicKey};
+use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
     asset_service::{AssetService, L2AssetInfo},
     asset_storage::{AssetMetadataStorage, BlobStorage},
@@ -122,5 +122,22 @@ impl AssetService for AssetServiceImpl {
 
     async fn fetch_metadata(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<String>> {
         self.asset_metadata_storage.get_json(&asset_pubkey).await
+    }
+
+    async fn fetch_assets_by_owner(
+        &self,
+        owner_pubkey: PublicKey,
+        sorting: AssetSorting,
+        limit: u32,
+    ) -> anyhow::Result<Vec<L2AssetInfo>> {
+        let l2_assets = self.l2_storage.find_by_owner(&owner_pubkey, sorting, limit).await?;
+        let l2_asset_pubkeys = l2_assets.iter().map(|asset| asset.pubkey).collect::<Vec<PublicKey>>();
+        let l2_assets_metadata = self.asset_metadata_storage.get_json_batch(&l2_asset_pubkeys).await?;
+
+        Ok(l2_assets
+            .into_iter()
+            .zip(l2_assets_metadata)
+            .map(|(asset, metadata)| L2AssetInfo { asset, metadata })
+            .collect())
     }
 }

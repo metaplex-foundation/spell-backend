@@ -1,8 +1,8 @@
 use aws_sdk_s3::{error::SdkError, primitives::ByteStream};
 use entities::l2::PublicKey;
+use futures::future::try_join_all;
 use interfaces::asset_storage::{AssetMetadataStorage, BlobStorage};
 use std::sync::Arc;
-use futures::future::try_join_all;
 
 const MIME_JSON: &str = "application/json";
 

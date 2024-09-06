@@ -91,6 +91,13 @@ jobs:
       - name: Set Default Rust Toolchain
         run: rustup override set ${{ env.RUST_STABLE_VERSION }}
 
+      - name: |
+          Setup env vars to increasings tests runtime duration (Values are specified in milliseconds).
+          300000 milliseconds = 5 minutes
+        run: | 
+          export RUST_TEST_TIME_UNIT=300000,300000
+          export RUST_TEST_TIME_INTEGRATION=300000,300000
+
       - name: Run Unit Tests
         run: cargo test --workspace
 

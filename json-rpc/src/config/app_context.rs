@@ -25,6 +25,11 @@ impl AppCtx {
     }
 
     pub async fn new(app_config: &AppConfig) -> Self {
+        let metadata_uri_base = MetadataUriCreator::new(format!(
+            "{}:{}",
+            app_config.settings.rest_server.host, app_config.settings.rest_server.port,
+        ));
+
         let connection_pool = Self::create_connection_pool(
             &app_config.settings.database.connection_url,
             app_config.settings.database.max_connections,
@@ -62,7 +67,7 @@ impl AppCtx {
                 asset_metadata_storage: s3_storage.clone(),
                 blob_storage: s3_storage.clone(),
             }),
-            metadata_uri_base: MetadataUriCreator::new(app_config.socket_addr().to_string()),
+            metadata_uri_base,
         }
     }
 

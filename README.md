@@ -64,3 +64,19 @@ From root directory:
 cd ./rest-server
 cargo r
 ```
+
+# Run all tests
+Before running tests, it may be necessary to configure the test runtime limits due to potential high CPU and RAM usage when running tests in a Docker environment. This ensures that tests don't fail due to exceeding time limits.
+
+Test time limits are specified in milliseconds. For example, 300000 milliseconds equals 5 minutes.
+
+To configure the test timeouts, run the following commands:
+```shell
+export RUST_TEST_TIME_UNIT=300000,300000
+export RUST_TEST_TIME_INTEGRATION=300000,300000
+```
+
+Once the environment is set, you can run all tests using:
+```shell
+cargo test
+```

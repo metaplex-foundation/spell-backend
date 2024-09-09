@@ -89,7 +89,8 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
         .collect::<Vec<(L2Asset, Option<String>)>>();
 
     // TODO: Make sure to use correct timestamp.
-    let cursor = l2_assets.last()
+    let cursor = l2_assets
+        .last()
         .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey));
 
     let mut das_assets = Vec::with_capacity(l2_assets.len());

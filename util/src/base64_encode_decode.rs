@@ -1,9 +1,13 @@
 use crate::publickey::PublicKeyExt;
-use anyhow::bail;
+use anyhow::Context;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
+use base64::engine::GeneralPurpose;
 use base64::Engine;
 use chrono::NaiveDateTime;
 use entities::l2::{pubkey_to_string, PublicKey};
+
+const SEPARATOR: char = '=';
+const BASE64_ENGINE: GeneralPurpose = STANDARD_NO_PAD;
 
 /// For pagination of assets in the utility chain, we use a string encoded in `base64` format in the following structure:
 /// `slot+asset_pubkey`
@@ -16,16 +20,24 @@ use entities::l2::{pubkey_to_string, PublicKey};
 ///     `2015-09-18T23:56:04=CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV`
 /// The timestamp format adheres to the following specification: https://docs.rs/chrono/0.4.38/chrono/naive/struct.NaiveDateTime.html#impl-FromStr-for-NaiveDateTime.
 pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(NaiveDateTime, PublicKey)> {
-    let Ok(decoded_key) = STANDARD_NO_PAD.decode(encoded_key) else { bail!("Base64 decoding error!") };
+    // Attempt to decode the base64-encoded string
+    let decoded_bytes = BASE64_ENGINE
+        .decode(encoded_key)
+        .context("Failed to decode base64 string")?;
 
-    let decoded_key = String::from_utf8(decoded_key)?;
-    let Some((date, pubkey)) = decoded_key.split_once('=') else {
-        bail!("No encoded separator provided!")
-    };
+    // Convert decoded bytes into a UTF-8 string
+    let decoded_str = String::from_utf8(decoded_bytes).context("Decoded bytes are not valid UTF-8")?;
 
-    let creation_timestamp = date.parse::<NaiveDateTime>()?;
+    // Split the decoded string into timestamp and public key
+    let (timestamp_str, pubkey_str) = decoded_str
+        .split_once(SEPARATOR)
+        .context("Expected '=' separator between timestamp and public key")?;
 
-    let Some(pubkey) = PublicKey::from_bs58(pubkey) else { bail!("Cannot create public key!") };
+    let creation_timestamp = timestamp_str
+        .parse::<NaiveDateTime>()
+        .context("Failed to parse timestamp as NaiveDateTime")?;
+
+    let pubkey = PublicKey::from_bs58(pubkey_str).context("Failed to parse public key from Base58")?;
 
     Ok((creation_timestamp, pubkey))
 }
@@ -33,7 +45,12 @@ pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(N
 /// We also need to return a cursor for pagination, which must be encoded in the same format:
 /// `'timestamp' + '=' + 'asset_pubkey'` encoded in base64,
 pub fn encode_timestamp_and_asset_pubkey(date: NaiveDateTime, pubkey: PublicKey) -> String {
-    STANDARD_NO_PAD.encode(format!("{}={}", date.format("%Y-%m-%dT%H:%M:%S%.f").to_string(), pubkey_to_string(pubkey)))
+    BASE64_ENGINE.encode(format!(
+        "{}{}{}",
+        date.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
+        SEPARATOR,
+        pubkey_to_string(pubkey)
+    ))
 }
 
 #[cfg(test)]

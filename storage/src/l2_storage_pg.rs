@@ -5,6 +5,7 @@ use sqlx::{
     ConnectOptions, PgPool, Row,
 };
 use tracing::log::LevelFilter;
+use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
 
 pub struct L2StoragePg {
     pub pool: PgPool,
@@ -140,13 +141,18 @@ impl L2Storage for L2StoragePg {
             .collect::<Result<Vec<L2Asset>, _>>()?)
     }
 
+    //before: Option<encode(native date + asset_pubkey)>,
+    //native date i64
+
     async fn find_by_owner(
         &self,
         owner_pubkey: &PublicKey,
         sorting: AssetSorting,
         limit: u32,
+        before: Option<String>,
+        after: Option<String>,
     ) -> anyhow::Result<Vec<L2Asset>> {
-        let sort = {
+        let (sorting_by, sort_direction) = {
             let sorting_by = match sorting.sort_by {
                 AssetSortBy::Created => "asset_create_timestamp",
                 AssetSortBy::Updated => todo!(),
@@ -154,9 +160,16 @@ impl L2Storage for L2StoragePg {
             .to_string();
             let sort_direction = sorting.sort_direction.to_string();
 
-            format!(" ORDER BY {sorting_by} {sort_direction} ")
+            (sorting_by, sort_direction)
         };
-        let limit = format!(" LIMIT {limit} ");
+        let before_and_after = (
+            before
+                .map(|before| decode_timestamp_and_asset_pubkey(&before))
+                .transpose()?,
+            after
+                .map(|after| decode_timestamp_and_asset_pubkey(&after))
+                .transpose()?,
+        );
 
         let mut query_builder = sqlx::QueryBuilder::new(
             r#"
@@ -176,8 +189,32 @@ impl L2Storage for L2StoragePg {
         );
 
         query_builder.push_bind(owner_pubkey);
-        query_builder.push(sort);
-        query_builder.push(limit);
+
+        // TODO: Make sure to use correct timestamp.
+        match before_and_after {
+            (Some(before), Some(after)) => {
+                query_builder
+                    .push(" AND asset_create_timestamp > ")
+                    .push_bind(before.0)
+                    .push(" AND asset_create_timestamp < ")
+                    .push_bind(after.0);
+            }
+            (None, Some(after)) => {
+                query_builder.push(" AND asset_create_timestamp < ").push_bind(after.0);
+            }
+            (Some(before), None) => {
+                query_builder.push(" AND asset_create_timestamp > ").push_bind(before.0);
+            }
+            (None, None) => {}
+        }
+
+        query_builder
+            .push(" ORDER BY ")
+            .push(sorting_by)
+            .push(" ")
+            .push(sort_direction);
+
+        query_builder.push(" LIMIT ").push_bind(limit as i64);
 
         Ok(query_builder
             .build()

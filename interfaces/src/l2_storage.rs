@@ -12,6 +12,8 @@ pub trait L2Storage {
         owner_pubkey: &PublicKey,
         sorting: AssetSorting,
         limit: u32,
+        before: Option<String>,
+        after: Option<String>,
     ) -> anyhow::Result<Vec<L2Asset>>;
 }
 

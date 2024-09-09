@@ -129,8 +129,13 @@ impl AssetService for AssetServiceImpl {
         owner_pubkey: PublicKey,
         sorting: AssetSorting,
         limit: u32,
+        before: Option<String>,
+        after: Option<String>,
     ) -> anyhow::Result<Vec<L2AssetInfo>> {
-        let l2_assets = self.l2_storage.find_by_owner(&owner_pubkey, sorting, limit).await?;
+        let l2_assets = self
+            .l2_storage
+            .find_by_owner(&owner_pubkey, sorting, limit, before, after)
+            .await?;
         let l2_asset_pubkeys = l2_assets.iter().map(|asset| asset.pubkey).collect::<Vec<PublicKey>>();
         let l2_assets_metadata = self.asset_metadata_storage.get_json_batch(&l2_asset_pubkeys).await?;
 

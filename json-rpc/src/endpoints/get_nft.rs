@@ -9,6 +9,7 @@ use entities::l2::{L2Asset, PublicKey};
 use interfaces::asset_service::L2AssetInfo;
 use serde_json::json;
 use std::collections::HashMap;
+use util::base64_encode_decode::encode_timestamp_and_asset_pubkey;
 use util::publickey::PublicKeyExt;
 
 pub async fn get_asset(req_params: GetAsset, ctx: ArcedAppCtx) -> JsonRpcResponse {
@@ -74,16 +75,23 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
     let owner_address = PublicKey::from_bs58(&req_params.owner_address)
         .ok_or(DasApiError::PubkeyValidationError(req_params.owner_address.to_owned()))?;
     let sorting = req_params.sort_by.map(Into::into).unwrap_or_default();
-    let limit = req_params.limit.unwrap_or(DEFAULT_LIMIT_FOR_PAGE);
+    let limit = req_params.limit.map(normalize_limit).unwrap_or(DEFAULT_LIMIT_FOR_PAGE);
+    let before = req_params.before;
+    let after = req_params.after;
 
     let l2_assets = ctx
         .asset_service
-        .fetch_assets_by_owner(owner_address, sorting, limit)
+        .fetch_assets_by_owner(owner_address, sorting, limit, before, after)
         .await
         .map_err(|_| DasApiError::DatabaseError)?
         .into_iter()
         .map(|asset| (asset.asset, asset.metadata))
         .collect::<Vec<(L2Asset, Option<String>)>>();
+
+    // TODO: Make sure to use correct timestamp.
+    let cursor = l2_assets
+        .last()
+        .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey));
 
     let mut das_assets = Vec::with_capacity(l2_assets.len());
 
@@ -97,9 +105,15 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
         das_assets.push(Asset::from(asset_extended_and_metadata))
     }
 
-    Ok(json!(AssetList { total: das_assets.len() as u32, limit, items: das_assets, ..Default::default() }))
+    Ok(json!(AssetList { total: das_assets.len() as u32, limit, items: das_assets, cursor ..Default::default() }))
 }
 
 pub async fn get_asset_by_creator(_req_params: GetAssetsByCreator, _ctx: ArcedAppCtx) -> JsonRpcResponse {
     Ok(json!("Some Assets"))
+}
+
+fn normalize_limit(limit: u32) -> u32 {
+    (limit > DEFAULT_LIMIT_FOR_PAGE)
+        .then_some(DEFAULT_LIMIT_FOR_PAGE)
+        .unwrap_or(limit)
 }

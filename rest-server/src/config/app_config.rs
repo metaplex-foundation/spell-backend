@@ -3,7 +3,7 @@ use crate::endpoints::health_check::{health, secured_health};
 use crate::endpoints::l2_assets::{create_asset, get_asset, get_metadata, update_asset};
 use actix_web::web::{Data, ServiceConfig};
 use entities::api_key::{ApiKey, ApiKeys, Username};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::env::var;
@@ -90,10 +90,13 @@ impl AppConfig {
             "Creating connection pool from: '{}', with max_size: '{}', and min_size: '{}' connections.",
             db_url, max_size_pool, min_size_pool,
         );
+        let mut opts: PgConnectOptions = db_url.parse().unwrap();
+        opts = opts.extra_float_digits(None); // needed for Pgbouncer
+
         PgPoolOptions::new()
             .max_connections(max_size_pool)
             .min_connections(min_size_pool)
-            .connect(&db_url)
+            .connect_with(opts)
             .await
             .unwrap_or_else(|e| panic!("Could not connect to db: '{}'", e))
     }

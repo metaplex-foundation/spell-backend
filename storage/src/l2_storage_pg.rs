@@ -16,6 +16,7 @@ impl L2StoragePg {
         let mut options: PgConnectOptions = url.parse().unwrap();
         options.log_statements(LevelFilter::Off);
         options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
+        options = options.extra_float_digits(None); // needed for Pgbouncer
 
         let pool = PgPoolOptions::new()
             .min_connections(min_connections)

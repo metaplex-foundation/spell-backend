@@ -33,13 +33,13 @@ pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(N
         .split_once(SEPARATOR)
         .context("Expected '=' separator between timestamp and public key")?;
 
-    let creation_timestamp = timestamp_str
+    let timestamp = timestamp_str
         .parse::<NaiveDateTime>()
         .context("Failed to parse timestamp as NaiveDateTime")?;
 
     let pubkey = PublicKey::from_bs58(pubkey_str).context("Failed to parse public key from Base58")?;
 
-    Ok((creation_timestamp, pubkey))
+    Ok((timestamp, pubkey))
 }
 
 /// We also need to return a cursor for pagination, which must be encoded in the same format:

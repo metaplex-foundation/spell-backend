@@ -259,19 +259,19 @@ fn add_timestamp_and_key_comparison(
 
     query_builder
         .push(" AND (")
-        .push_bind(order_field.clone())
-        .push_bind(comparison.clone())
+        .push(order_field.clone())
+        .push(comparison.clone())
         .push_bind(timestamp);
 
     query_builder
         .push(" OR (")
-        .push_bind(order_field)
+        .push(order_field)
         .push(" = ")
         .push_bind(timestamp);
 
     query_builder
         .push(" AND asset_pubkey ")
-        .push_bind(comparison)
+        .push(comparison)
         .push_bind(pubkey)
         .push("))");
 

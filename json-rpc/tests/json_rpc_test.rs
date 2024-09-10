@@ -10,7 +10,7 @@ use json_rpc::endpoints::errors::DasApiError;
 use json_rpc::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_owner};
 use json_rpc::endpoints::rpc_asset_models::Asset;
 use json_rpc::endpoints::types::{
-    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner,
+    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner, JsonRpcError,
 };
 use json_rpc::endpoints::DEFAULT_LIMIT_FOR_PAGE;
 use serde_json::Value;
@@ -370,6 +370,30 @@ async fn get_assets_by_non_existent_owner() {
     assert!(actual_res.total.eq(&0));
     assert!(actual_res.limit.eq(&DEFAULT_LIMIT_FOR_PAGE));
     assert!(actual_res.items.is_empty());
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_with_invalid_limit() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let request_params = GetAssetsByOwner {
+        owner_address: Pubkey::new_unique().to_string(),
+        sort_by: None,
+        limit: Some(DEFAULT_LIMIT_FOR_PAGE + 1),
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let expected_err = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect_err("Should fail.");
+
+    assert_eq!(expected_err, DasApiError::LimitTooBig(DEFAULT_LIMIT_FOR_PAGE).into());
 }
 
 #[tokio::test]

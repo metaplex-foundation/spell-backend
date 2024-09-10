@@ -4,7 +4,7 @@ use thiserror::Error;
 
 const STANDARD_ERROR_CODE: i64 = -32000;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialOrd, PartialEq)]
 pub enum DasApiError {
     #[error("No data found.")]
     NoDataFoundError,
@@ -14,6 +14,8 @@ pub enum DasApiError {
     DatabaseError,
     #[error("Failed to parse Json metadata.")]
     JsonMetadataParsing,
+    #[error("Requested limit number is too big. Up to '{0}' limit is supported.")]
+    LimitTooBig(u32),
 }
 
 impl From<DasApiError> for JsonRpcError {
@@ -33,6 +35,11 @@ impl From<DasApiError> for JsonRpcError {
             DasApiError::JsonMetadataParsing => Self {
                 code: ErrorCode::ParseError,
                 message: "Failed to parse Json metadata.".to_string(),
+                data: None,
+            },
+            DasApiError::LimitTooBig(max_limit) => Self {
+                code: ErrorCode::ServerError(STANDARD_ERROR_CODE),
+                message: format!("Requested limit number is too big. Up to '{max_limit}' limit is supported."),
                 data: None,
             },
         }

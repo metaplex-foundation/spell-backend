@@ -13,7 +13,7 @@ pub struct L2StoragePg {
 
 impl L2StoragePg {
     pub async fn new_from_url(url: &str, min_connections: u32, max_connections: u32) -> anyhow::Result<L2StoragePg> {
-        let mut options: PgConnectOptions = url.parse().unwrap();
+        let mut options: PgConnectOptions = url.parse()?;
         options.log_statements(LevelFilter::Off);
         options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
 
@@ -210,7 +210,7 @@ fn add_timestamp_and_pubkey_comparison(
                     AssetSortDirection::Desc => " < ",
                 };
 
-                add_slot_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+                add_timestamp_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
             }
 
             if let Some(after) = after {
@@ -219,7 +219,7 @@ fn add_timestamp_and_pubkey_comparison(
                     AssetSortDirection::Desc => " < ",
                 };
 
-                add_slot_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+                add_timestamp_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
             }
         }
         AssetSortBy::Updated => {
@@ -229,7 +229,7 @@ fn add_timestamp_and_pubkey_comparison(
                     AssetSortDirection::Desc => " < ",
                 };
 
-                add_slot_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+                add_timestamp_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
             }
 
             if let Some(after) = after {
@@ -238,7 +238,7 @@ fn add_timestamp_and_pubkey_comparison(
                     AssetSortDirection::Desc => " < ",
                 };
 
-                add_slot_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+                add_timestamp_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
             }
         }
     }
@@ -246,7 +246,7 @@ fn add_timestamp_and_pubkey_comparison(
     Ok(())
 }
 
-fn add_slot_and_key_comparison(
+fn add_timestamp_and_key_comparison(
     key: &str,
     comparison: &str,
     order_field: &AssetSortBy,
@@ -255,13 +255,23 @@ fn add_slot_and_key_comparison(
     let (timestamp, pubkey) = decode_timestamp_and_asset_pubkey(key)?;
 
     let order_field = order_field.to_string();
+    let comparison = comparison.to_string();
 
     query_builder
-        .push(format!(" AND ({}{}", order_field, comparison))
-        .push_bind(timestamp)
-        .push(format!(" OR ({} = ", order_field))
-        .push_bind(timestamp)
-        .push(format!(" AND asset_pubkey {}", comparison))
+        .push(" AND (")
+        .push_bind(order_field.clone())
+        .push_bind(comparison.clone())
+        .push_bind(timestamp);
+
+    query_builder
+        .push(" OR (")
+        .push_bind(order_field)
+        .push(" = ")
+        .push_bind(timestamp);
+
+    query_builder
+        .push(" AND asset_pubkey ")
+        .push_bind(comparison)
         .push_bind(pubkey)
         .push("))");
 

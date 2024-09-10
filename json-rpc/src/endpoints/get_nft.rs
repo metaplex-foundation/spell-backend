@@ -75,7 +75,7 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
     let owner_address = PublicKey::from_bs58(&req_params.owner_address)
         .ok_or(DasApiError::PubkeyValidationError(req_params.owner_address.to_owned()))?;
     let sorting = req_params.sort_by.map(Into::into).unwrap_or_default();
-    let limit = req_params.limit.map(normalize_limit).unwrap_or(DEFAULT_LIMIT_FOR_PAGE);
+    let limit = verify_limit(req_params.limit)?;
     let before = req_params.before;
     let after = req_params.after;
     let page = req_params.page;
@@ -144,8 +144,11 @@ pub async fn get_asset_by_creator(_req_params: GetAssetsByCreator, _ctx: ArcedAp
     Ok(json!("Some Assets"))
 }
 
-fn normalize_limit(limit: u32) -> u32 {
-    (limit > DEFAULT_LIMIT_FOR_PAGE)
-        .then_some(DEFAULT_LIMIT_FOR_PAGE)
-        .unwrap_or(limit)
+fn verify_limit(limit: Option<u32>) -> Result<u32, DasApiError> {
+    match limit {
+        Some(limit) => (limit < DEFAULT_LIMIT_FOR_PAGE)
+            .then_some(limit)
+            .ok_or(DasApiError::LimitTooBig(DEFAULT_LIMIT_FOR_PAGE)),
+        None => Ok(DEFAULT_LIMIT_FOR_PAGE),
+    }
 }

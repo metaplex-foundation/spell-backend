@@ -4,7 +4,7 @@ use crate::endpoints::rpc_asset_models::Asset;
 use crate::endpoints::types::{
     AssetExtended, AssetList, GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcResponse,
 };
-use crate::endpoints::DEFAULT_LIMIT_FOR_PAGE;
+use crate::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
 use entities::l2::{L2Asset, PublicKey};
 use interfaces::asset_service::L2AssetInfo;
 use serde_json::json;
@@ -78,7 +78,7 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
     let limit = verify_limit(req_params.limit)?;
     let before = req_params.before;
     let after = req_params.after;
-    let page = req_params.page;
+    let page = verify_page(req_params.page)?;
     let cursor = req_params.cursor;
 
     let is_cursor_enabled = before.is_none() && after.is_none() && page.is_none();
@@ -150,5 +150,18 @@ fn verify_limit(limit: Option<u32>) -> Result<u32, DasApiError> {
             .then_some(limit)
             .ok_or(DasApiError::LimitTooBig(DEFAULT_LIMIT_FOR_PAGE)),
         None => Ok(DEFAULT_LIMIT_FOR_PAGE),
+    }
+}
+
+fn verify_page(limit: Option<u32>) -> Result<Option<u32>, DasApiError> {
+    match limit {
+        Some(limit) => {
+            if limit < DEFAULT_MAX_PAGE_LIMIT {
+                Ok(Some(limit))
+            } else {
+                Err(DasApiError::PageTooBig(DEFAULT_MAX_PAGE_LIMIT))
+            }
+        },
+        None => Ok(None),
     }
 }

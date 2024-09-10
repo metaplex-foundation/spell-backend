@@ -12,7 +12,7 @@ use json_rpc::endpoints::rpc_asset_models::Asset;
 use json_rpc::endpoints::types::{
     AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner, JsonRpcError,
 };
-use json_rpc::endpoints::DEFAULT_LIMIT_FOR_PAGE;
+use json_rpc::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
 use serde_json::Value;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
@@ -394,6 +394,30 @@ async fn get_assets_by_owner_with_invalid_limit() {
         .expect_err("Should fail.");
 
     assert_eq!(expected_err, DasApiError::LimitTooBig(DEFAULT_LIMIT_FOR_PAGE).into());
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_with_invalid_page() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let request_params = GetAssetsByOwner {
+        owner_address: Pubkey::new_unique().to_string(),
+        sort_by: None,
+        limit: None,
+        page: Some(DEFAULT_MAX_PAGE_LIMIT + 1),
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let expected_err = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect_err("Should fail.");
+
+    assert_eq!(expected_err, DasApiError::PageTooBig(DEFAULT_MAX_PAGE_LIMIT).into());
 }
 
 #[tokio::test]

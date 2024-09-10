@@ -52,8 +52,8 @@ pub enum AssetSortBy {
 impl ToString for AssetSortBy {
     fn to_string(&self) -> String {
         match self {
-            AssetSortBy::Created => "created",
-            AssetSortBy::Updated => "updated",
+            AssetSortBy::Created => "asset_create_timestamp",
+            AssetSortBy::Updated => "asset_update_timestamp",
         }
         .to_string()
     }

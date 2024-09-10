@@ -10,10 +10,10 @@ pub trait L2Storage {
     async fn find_by_owner(
         &self,
         owner_pubkey: &PublicKey,
-        sorting: AssetSorting,
+        sorting: &AssetSorting,
         limit: u32,
-        before: Option<String>,
-        after: Option<String>,
+        before: Option<&String>,
+        after: Option<&String>,
     ) -> anyhow::Result<Vec<L2Asset>>;
 }
 

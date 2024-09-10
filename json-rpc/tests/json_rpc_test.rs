@@ -371,3 +371,71 @@ async fn get_assets_by_non_existent_owner() {
     assert!(actual_res.limit.eq(&DEFAULT_LIMIT_FOR_PAGE));
     assert!(actual_res.items.is_empty());
 }
+
+#[tokio::test]
+async fn get_assets_owner_by_cursor() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests).await;
+
+    let asset_owner = data_from_db.first().unwrap().asset.owner.to_string();
+
+    let mut expected_order_of_assets_by_name = data_from_db
+        .iter()
+        .map(|asset| asset.asset.name.clone())
+        .collect::<Vec<String>>();
+
+    let first_asset_owner = expected_order_of_assets_by_name.pop().unwrap();
+    let request_params = GetAssetsByOwner {
+        owner_address: asset_owner.clone(),
+        sort_by: None,
+        limit: Some(1),
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+
+    let first_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let first_res = serde_json::from_value::<AssetList>(first_res).expect("Failed serialize DAO assets..");
+
+    assert_eq!(get_first_asset_name(&first_res), first_asset_owner);
+
+    let cursor_to_call_next = first_res.cursor.clone().unwrap();
+    let request_params = GetAssetsByOwner {
+        owner_address: asset_owner,
+        sort_by: None,
+        limit: Some(1),
+        page: None,
+        before: None,
+        after: None,
+        cursor: Some(cursor_to_call_next),
+    };
+
+    let second_res = get_asset_by_owner(request_params, app_ctx.clone())
+        .await
+        .expect("Failed to get assets.");
+    let first_res = serde_json::from_value::<AssetList>(second_res).expect("Failed serialize DAO assets..");
+
+    assert_eq!(get_first_asset_name(&first_res), expected_order_of_assets_by_name.pop().unwrap());
+}
+
+fn get_first_asset_name(asset_list: &AssetList) -> String {
+    serde_json::from_value(asset_list
+        .items
+        .first()
+        .cloned()
+        .unwrap()
+        .content
+        .unwrap()
+        .metadata
+        .get_item("name")
+        .unwrap()
+        .clone()
+    ).unwrap()
+}

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chrono::Local;
+use chrono::Utc;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
     asset_service::{AssetService, L2AssetInfo},
@@ -49,7 +49,7 @@ impl AssetService for AssetServiceImpl {
             creator,
             collection,
             authority,
-            create_timestamp: Local::now().naive_local(),
+            create_timestamp: Utc::now().naive_local(),
             pib44_account_num: account,
             pib44_address_num: address,
         };
@@ -127,10 +127,10 @@ impl AssetService for AssetServiceImpl {
     async fn fetch_assets_by_owner(
         &self,
         owner_pubkey: PublicKey,
-        sorting: AssetSorting,
+        sorting: &AssetSorting,
         limit: u32,
-        before: Option<String>,
-        after: Option<String>,
+        before: Option<&String>,
+        after: Option<&String>,
     ) -> anyhow::Result<Vec<L2AssetInfo>> {
         let l2_assets = self
             .l2_storage

@@ -1,12 +1,11 @@
-use crate::publickey::PublicKeyExt;
-use anyhow::Context;
+use anyhow::{bail, Context};
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::engine::GeneralPurpose;
 use base64::Engine;
-use chrono::NaiveDateTime;
-use entities::l2::{pubkey_to_string, PublicKey};
+use chrono::{DateTime, NaiveDateTime};
+use entities::l2::PublicKey;
+use std::mem::size_of;
 
-const SEPARATOR: char = '=';
 const BASE64_ENGINE: GeneralPurpose = STANDARD_NO_PAD;
 
 /// For pagination of assets in the utility chain, we use a string encoded in `base64` format in the following structure:
@@ -20,24 +19,21 @@ const BASE64_ENGINE: GeneralPurpose = STANDARD_NO_PAD;
 ///     `2015-09-18T23:56:04=CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV`
 /// The timestamp format adheres to the following specification: https://docs.rs/chrono/0.4.38/chrono/naive/struct.NaiveDateTime.html#impl-FromStr-for-NaiveDateTime.
 pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(NaiveDateTime, PublicKey)> {
-    // Attempt to decode the base64-encoded string
-    let decoded_bytes = BASE64_ENGINE
+    let key = BASE64_ENGINE
         .decode(encoded_key)
         .context("Failed to decode base64 string")?;
 
-    // Convert decoded bytes into a UTF-8 string
-    let decoded_str = String::from_utf8(decoded_bytes).context("Decoded bytes are not valid UTF-8")?;
+    if key.len() < 8 {
+        bail!("Invalid key: Not enough data for a timestamp (requires at least 8 bytes)");
+    }
 
-    // Split the decoded string into timestamp and public key
-    let (timestamp_str, pubkey_str) = decoded_str
-        .split_once(SEPARATOR)
-        .context("Expected '=' separator between timestamp and public key")?;
+    let timestamp_millis = i64::from_be_bytes(key[0..8].try_into()?);
 
-    let timestamp = timestamp_str
-        .parse::<NaiveDateTime>()
-        .context("Failed to parse timestamp as NaiveDateTime")?;
+    let timestamp = DateTime::from_timestamp_millis(timestamp_millis)
+        .context("Invalid timestamp: Could not parse into NaiveDateTime")?
+        .naive_utc();
 
-    let pubkey = PublicKey::from_bs58(pubkey_str).context("Failed to parse public key from Base58")?;
+    let pubkey = PublicKey::try_from(&key[8..]).context("Failed to parse public key from remaining bytes")?;
 
     Ok((timestamp, pubkey))
 }
@@ -45,12 +41,15 @@ pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(N
 /// We also need to return a cursor for pagination, which must be encoded in the same format:
 /// `'timestamp' + '=' + 'asset_pubkey'` encoded in base64,
 pub fn encode_timestamp_and_asset_pubkey(date: NaiveDateTime, pubkey: PublicKey) -> String {
-    BASE64_ENGINE.encode(format!(
-        "{}{}{}",
-        date.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
-        SEPARATOR,
-        pubkey_to_string(pubkey)
-    ))
+    let timestamp_size = size_of::<i64>();
+    let pubkey_size = size_of::<PublicKey>();
+
+    let mut vec = Vec::with_capacity(timestamp_size + pubkey_size);
+
+    vec.extend_from_slice(&date.and_utc().timestamp_millis().to_be_bytes());
+    vec.extend_from_slice(&pubkey);
+
+    BASE64_ENGINE.encode(vec)
 }
 
 #[cfg(test)]
@@ -61,31 +60,13 @@ mod test {
     use entities::l2::PublicKey;
 
     #[test]
-    fn decode_creation_timestamp_and_asset_pubkey_test() {
-        // base64 encoding of:
-        //  2015-09-18T23:56:04=CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV
-        // with no padding and UTF-8 destination character set
-        let input = "MjAxNS0wOS0xOFQyMzo1NjowND1DcVRvWTNxV01SS0szSDhVcG1YTFVRb2R1VUZMOFU5Sml6ak4yb0Nldm5GVg";
+    fn encode_and_decode_timestamp_and_asset_pubkey_test() {
+        let input_date = NaiveDateTime::default();
+        let input_pubkey = PublicKey::new_unique();
+        let encoded = encode_timestamp_and_asset_pubkey(input_date, input_pubkey);
+        let (time, pubkey) = decode_timestamp_and_asset_pubkey(&encoded).unwrap();
 
-        let expected_date = "2015-09-18T23:56:04".parse::<NaiveDateTime>().unwrap();
-        let expected_pubkey = PublicKey::from_bs58("CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV").unwrap();
-        let (actual_date, actual_pubkey) = decode_timestamp_and_asset_pubkey(input).unwrap();
-
-        assert_eq!(actual_date, expected_date);
-        assert_eq!(actual_pubkey, expected_pubkey)
-    }
-
-    #[test]
-    fn encode_creation_timestamp_and_asset_pubkey_test() {
-        // base64 encoding of:
-        //  2015-09-18T23:56:04=CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV
-        // with no padding and UTF-8 destination character set
-        let input = "MjAxNS0wOS0xOFQyMzo1NjowND1DcVRvWTNxV01SS0szSDhVcG1YTFVRb2R1VUZMOFU5Sml6ak4yb0Nldm5GVg";
-
-        let input_date = "2015-09-18T23:56:04".parse::<NaiveDateTime>().unwrap();
-        let input_pubkey = PublicKey::from_bs58("CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV").unwrap();
-        let res = encode_timestamp_and_asset_pubkey(input_date, input_pubkey);
-
-        assert_eq!(&res, "MjAxNS0wOS0xOFQyMzo1NjowND1DcVRvWTNxV01SS0szSDhVcG1YTFVRb2R1VUZMOFU5Sml6ak4yb0Nldm5GVg");
+        assert_eq!(time, input_date);
+        assert_eq!(pubkey, input_pubkey);
     }
 }

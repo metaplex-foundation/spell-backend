@@ -1,8 +1,8 @@
-use entities::l2::{AssetSortBy, AssetSorting, L2Asset, PublicKey};
+use entities::l2::{AssetSortBy, AssetSortDirection, AssetSorting, L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgRow},
-    ConnectOptions, PgPool, Row,
+    ConnectOptions, PgPool, Postgres, QueryBuilder, Row,
 };
 use tracing::log::LevelFilter;
 use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
@@ -34,7 +34,7 @@ impl L2StoragePg {
 #[async_trait::async_trait]
 impl L2Storage for L2StoragePg {
     async fn save(&self, asset: &L2Asset) -> anyhow::Result<()> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 INSERT INTO l2_assets_v1
                 (
@@ -79,7 +79,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn find(&self, pubkey: &PublicKey) -> anyhow::Result<Option<L2Asset>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 SELECT
                     asset_pubkey,
@@ -107,7 +107,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 SELECT
                     asset_pubkey,
@@ -141,37 +141,15 @@ impl L2Storage for L2StoragePg {
             .collect::<Result<Vec<L2Asset>, _>>()?)
     }
 
-    //before: Option<encode(native date + asset_pubkey)>,
-    //native date i64
-
     async fn find_by_owner(
         &self,
         owner_pubkey: &PublicKey,
-        sorting: AssetSorting,
+        sorting: &AssetSorting,
         limit: u32,
-        before: Option<String>,
-        after: Option<String>,
+        before: Option<&String>,
+        after: Option<&String>,
     ) -> anyhow::Result<Vec<L2Asset>> {
-        let (sorting_by, sort_direction) = {
-            let sorting_by = match sorting.sort_by {
-                AssetSortBy::Created => "asset_create_timestamp",
-                AssetSortBy::Updated => todo!(),
-            }
-            .to_string();
-            let sort_direction = sorting.sort_direction.to_string();
-
-            (sorting_by, sort_direction)
-        };
-        let before_and_after = (
-            before
-                .map(|before| decode_timestamp_and_asset_pubkey(&before))
-                .transpose()?,
-            after
-                .map(|after| decode_timestamp_and_asset_pubkey(&after))
-                .transpose()?,
-        );
-
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 SELECT
                     asset_pubkey,
@@ -190,29 +168,21 @@ impl L2Storage for L2StoragePg {
 
         query_builder.push_bind(owner_pubkey);
 
-        // TODO: Make sure to use correct timestamp.
-        match before_and_after {
-            (Some(before), Some(after)) => {
-                query_builder
-                    .push(" AND asset_create_timestamp > ")
-                    .push_bind(before.0)
-                    .push(" AND asset_create_timestamp < ")
-                    .push_bind(after.0);
-            }
-            (None, Some(after)) => {
-                query_builder.push(" AND asset_create_timestamp < ").push_bind(after.0);
-            }
-            (Some(before), None) => {
-                query_builder.push(" AND asset_create_timestamp > ").push_bind(before.0);
-            }
-            (None, None) => {}
-        }
+        add_timestamp_and_pubkey_comparison(&mut query_builder, &sorting, before, after)?;
+
+        let is_order_reversed = before.is_some() && after.is_none();
+
+        let direction = match (&sorting.sort_direction, is_order_reversed) {
+            (AssetSortDirection::Asc, true) | (AssetSortDirection::Desc, false) => " DESC ",
+            (AssetSortDirection::Asc, false) | (AssetSortDirection::Desc, true) => " ASC ",
+        };
 
         query_builder
             .push(" ORDER BY ")
-            .push(sorting_by)
-            .push(" ")
-            .push(sort_direction);
+            .push(sorting.sort_by.to_string())
+            .push(direction)
+            .push(", asset_pubkey ")
+            .push(direction);
 
         query_builder.push(" LIMIT ").push_bind(limit as i64);
 
@@ -224,6 +194,78 @@ impl L2Storage for L2StoragePg {
             .map(|r| from_row(&r))
             .collect::<Result<Vec<L2Asset>, _>>()?)
     }
+}
+
+fn add_timestamp_and_pubkey_comparison(
+    mut query_builder: &mut QueryBuilder<'_, Postgres>,
+    asset_sorting: &AssetSorting,
+    before: Option<&String>,
+    after: Option<&String>,
+) -> anyhow::Result<()> {
+    match &asset_sorting.sort_by {
+        AssetSortBy::Created => {
+            if let Some(before) = before {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " > ",
+                    AssetSortDirection::Desc => " < ",
+                };
+
+                add_slot_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+
+            if let Some(after) = after {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " > ",
+                    AssetSortDirection::Desc => " < ",
+                };
+
+                add_slot_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+        }
+        AssetSortBy::Updated => {
+            if let Some(before) = before {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " > ",
+                    AssetSortDirection::Desc => " < ",
+                };
+
+                add_slot_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+
+            if let Some(after) = after {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " > ",
+                    AssetSortDirection::Desc => " < ",
+                };
+
+                add_slot_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn add_slot_and_key_comparison(
+    key: &str,
+    comparison: &str,
+    order_field: &AssetSortBy,
+    query_builder: &mut QueryBuilder<'_, Postgres>,
+) -> anyhow::Result<()> {
+    let (timestamp, pubkey) = decode_timestamp_and_asset_pubkey(key)?;
+
+    let order_field = order_field.to_string();
+
+    query_builder
+        .push(format!(" AND ({}{}", order_field, comparison))
+        .push_bind(timestamp)
+        .push(format!(" OR ({} = ", order_field))
+        .push_bind(timestamp)
+        .push(format!(" AND asset_pubkey {}", comparison))
+        .push_bind(pubkey)
+        .push("))");
+
+    Ok(())
 }
 
 fn from_row(row: &PgRow) -> anyhow::Result<L2Asset> {

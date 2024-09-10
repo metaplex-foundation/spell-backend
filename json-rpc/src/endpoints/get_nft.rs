@@ -78,23 +78,47 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
     let limit = req_params.limit.map(normalize_limit).unwrap_or(DEFAULT_LIMIT_FOR_PAGE);
     let before = req_params.before;
     let after = req_params.after;
+    let page = req_params.page;
+    let cursor = req_params.cursor;
+
+    let is_cursor_enabled = before.is_none() && after.is_none() && page.is_none();
+    let after = is_cursor_enabled.then_some(cursor).unwrap_or(after);
 
     let l2_assets = ctx
         .asset_service
-        .fetch_assets_by_owner(owner_address, sorting, limit, before, after)
+        .fetch_assets_by_owner(owner_address, &sorting, limit, before.as_ref(), after.as_ref())
         .await
         .map_err(|_| DasApiError::DatabaseError)?
         .into_iter()
         .map(|asset| (asset.asset, asset.metadata))
         .collect::<Vec<(L2Asset, Option<String>)>>();
 
-    // TODO: Make sure to use correct timestamp.
-    let cursor = l2_assets
-        .last()
-        .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey));
+
+    let (before, after, cursor, page) = if is_cursor_enabled {
+        (
+            None,
+            None,
+            l2_assets
+                .last()
+                .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey)),
+            None,
+        )
+    } else if let Some(page) = page {
+        (None, None, None, Some(page))
+    } else {
+        (
+            l2_assets
+                .first()
+                .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey)),
+            l2_assets
+                .last()
+                .map(|(asset, _)| encode_timestamp_and_asset_pubkey(asset.create_timestamp, asset.pubkey)),
+            None,
+            None,
+        )
+    };
 
     let mut das_assets = Vec::with_capacity(l2_assets.len());
-
     for (asset, metadata) in l2_assets {
         let asset_pubkey = asset.pubkey.to_string();
         let asset_extended_and_metadata = (
@@ -105,7 +129,16 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
         das_assets.push(Asset::from(asset_extended_and_metadata))
     }
 
-    Ok(json!(AssetList { total: das_assets.len() as u32, limit, items: das_assets, cursor ..Default::default() }))
+    Ok(json!(AssetList {
+        total: das_assets.len() as u32,
+        limit,
+        page,
+        before,
+        after,
+        items: das_assets,
+        errors: vec![],
+        cursor,
+    }))
 }
 
 pub async fn get_asset_by_creator(_req_params: GetAssetsByCreator, _ctx: ArcedAppCtx) -> JsonRpcResponse {

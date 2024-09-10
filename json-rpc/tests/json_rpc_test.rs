@@ -426,16 +426,18 @@ async fn get_assets_owner_by_cursor() {
 }
 
 fn get_first_asset_name(asset_list: &AssetList) -> String {
-    serde_json::from_value(asset_list
-        .items
-        .first()
-        .cloned()
-        .unwrap()
-        .content
-        .unwrap()
-        .metadata
-        .get_item("name")
-        .unwrap()
-        .clone()
-    ).unwrap()
+    serde_json::from_value(
+        asset_list
+            .items
+            .first()
+            .cloned()
+            .unwrap()
+            .content
+            .unwrap()
+            .metadata
+            .get_item("name")
+            .unwrap()
+            .clone(),
+    )
+    .unwrap()
 }

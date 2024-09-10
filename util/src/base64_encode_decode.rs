@@ -8,16 +8,6 @@ use std::mem::size_of;
 
 const BASE64_ENGINE: GeneralPurpose = STANDARD_NO_PAD;
 
-/// For pagination of assets in the utility chain, we use a string encoded in `base64` format in the following structure:
-/// `slot+asset_pubkey`
-/// (`asset_pubkey` is a string encoded in `base54` format).
-///
-/// In our backend implementation, the slot number is absent because the assets have not been minted on-chain.
-/// As a result, instead of the slot argument, we use a `timestamp` combined with the `asset_pubkey`,
-///  separated by the `=` symbol.
-/// Thus, the valid pagination string format would be:
-///     `2015-09-18T23:56:04=CqToY3qWMRKK3H8UpmXLUQoduUFL8U9JizjN2oCevnFV`
-/// The timestamp format adheres to the following specification: https://docs.rs/chrono/0.4.38/chrono/naive/struct.NaiveDateTime.html#impl-FromStr-for-NaiveDateTime.
 pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(NaiveDateTime, PublicKey)> {
     let key = BASE64_ENGINE
         .decode(encoded_key)
@@ -38,8 +28,6 @@ pub fn decode_timestamp_and_asset_pubkey(encoded_key: &str) -> anyhow::Result<(N
     Ok((timestamp, pubkey))
 }
 
-/// We also need to return a cursor for pagination, which must be encoded in the same format:
-/// `'timestamp' + '=' + 'asset_pubkey'` encoded in base64,
 pub fn encode_timestamp_and_asset_pubkey(date: NaiveDateTime, pubkey: PublicKey) -> String {
     let timestamp_size = size_of::<i64>();
     let pubkey_size = size_of::<PublicKey>();

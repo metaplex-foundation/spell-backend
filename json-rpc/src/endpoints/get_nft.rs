@@ -93,7 +93,6 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
         .map(|asset| (asset.asset, asset.metadata))
         .collect::<Vec<(L2Asset, Option<String>)>>();
 
-
     let (before, after, cursor, page) = if is_cursor_enabled {
         (
             None,

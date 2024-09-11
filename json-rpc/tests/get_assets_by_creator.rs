@@ -1,6 +1,6 @@
 use crate::utils::{
-    create_assets_with_same_creator_requests, extract_asset_name_from_das_asset, fill_database_with_test_data,
-    get_first_asset_name,
+    create_assets_with_same_creator_requests, create_assets_with_same_creator_requests_with_random_values,
+    extract_asset_name_from_das_asset, fill_database_with_test_data, get_first_asset_name,
 };
 use json_rpc::config::app_config::AppConfig;
 use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
@@ -13,6 +13,15 @@ use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
 
 mod utils;
+
+async fn get_asset_list_by_creator(req_params: GetAssetsByCreator, ctx: ArcedAppCtx) -> AssetList {
+    serde_json::from_value::<AssetList>(
+        get_asset_by_creator(req_params, ctx.clone())
+            .await
+            .expect("Failed to get assets."),
+    )
+    .expect("Failed serialize DAO assets..")
+}
 
 #[tokio::test]
 async fn get_assets_by_creator_sorting_by_created_date_desc() {
@@ -306,11 +315,138 @@ async fn get_assets_by_creator_using_cursor() {
     assert!(empty_list.is_empty());
 }
 
-async fn get_asset_list_by_creator(req_params: GetAssetsByCreator, ctx: ArcedAppCtx) -> AssetList {
-    serde_json::from_value::<AssetList>(
-        get_asset_by_creator(req_params, ctx.clone())
-            .await
-            .expect("Failed to get assets."),
-    )
-    .expect("Failed serialize DAO assets..")
+#[tokio::test]
+async fn get_assets_by_creator_with_pagination() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    // Put some assets for tests
+    let data_from_db =
+        fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_creator_requests_with_random_values)
+            .await;
+
+    assert!(data_from_db.len().eq(&100));
+
+    let asset_creator_address = data_from_db.first().unwrap().asset.creator.to_string();
+
+    check_pagination(app_ctx.clone(), asset_creator_address).await;
+}
+
+async fn check_pagination(app_ctx: ArcedAppCtx, asset_creator: String) {
+    let payload = GetAssetsByCreator {
+        limit: Some(10),
+        page: None,
+        before: None,
+        after: None,
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        cursor: None,
+    };
+    let first_10 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByCreator {
+        limit: Some(10),
+        page: None,
+        before: None,
+        creator_address: asset_creator.clone(),
+        cursor: first_10.cursor.clone(),
+        sort_by: None,
+        after: None,
+        only_verified: None,
+    };
+    let second_10 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByCreator {
+        limit: Some(20),
+        page: None,
+        before: None,
+        after: None,
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        cursor: None,
+    };
+    let first_20 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let mut first_two_resp = first_10.items;
+    first_two_resp.extend(second_10.items.clone());
+
+    assert_eq!(first_20.items, first_two_resp);
+
+    let payload = GetAssetsByCreator {
+        limit: Some(9),
+        creator_address: asset_creator.clone(),
+        before: first_20.cursor.clone(),
+        after: None,
+        sort_by: None,
+        page: None,
+        cursor: None,
+        only_verified: None,
+    };
+    let first_10_reverse = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let reversed = first_10_reverse.items;
+    let mut second_10_resp = second_10.items.clone();
+    // pop because we select 9 assets
+    // select 9 because request with before do not return asset which is in before parameter
+    second_10_resp.remove(0);
+    assert_eq!(reversed, second_10_resp);
+
+    let payload = GetAssetsByCreator {
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        limit: None,
+        after: first_10.cursor.clone(),
+        before: first_20.cursor,
+        cursor: None,
+        page: None,
+    };
+    let first_10_before_after = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    assert_eq!(first_10_before_after.items, second_10.items);
+
+    let payload = GetAssetsByCreator {
+        limit: Some(10),
+        page: None,
+        creator_address: asset_creator.clone(),
+        after: first_10.cursor,
+        sort_by: None,
+        before: None,
+        cursor: None,
+        only_verified: None,
+    };
+    let after_first_10 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByCreator {
+        limit: Some(10),
+        page: None,
+        creator_address: asset_creator.clone(),
+        after: after_first_10.after,
+        sort_by: None,
+        before: None,
+        cursor: None,
+        only_verified: None,
+    };
+    let after_first_20 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByCreator {
+        limit: Some(30),
+        page: None,
+        before: None,
+        after: None,
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        cursor: None,
+    };
+    let first_30 = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+    let mut combined_10_30 = after_first_10.items;
+    combined_10_30.extend(after_first_20.items.clone());
+
+    assert_eq!(combined_10_30, first_30.items[10..]);
 }

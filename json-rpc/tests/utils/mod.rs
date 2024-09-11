@@ -34,6 +34,17 @@ impl CreateAssetRequest {
             collection: Some(PublicKey::new_unique().to_string()),
         }
     }
+
+    fn with_name_and_creator(name: &str, creator: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            metadata_json: Self::METADATA_JSON.to_string(),
+            owner: PublicKey::new_unique().to_string(),
+            creator: creator.to_string(),
+            authority: PublicKey::new_unique().to_string(),
+            collection: Some(PublicKey::new_unique().to_string()),
+        }
+    }
 }
 
 pub fn create_assets_with_same_owner_requests() -> Vec<CreateAssetRequest> {
@@ -166,6 +177,18 @@ pub fn create_assets_with_same_creator_requests() -> Vec<CreateAssetRequest> {
             collection: Some("6y8P8QcG4T6RfL9FpL8zTrR5D2JvK4gH5D7wG5s8FkY3".to_string()),
         },
     ]
+}
+
+pub fn create_assets_with_same_creator_requests_with_random_values() -> Vec<CreateAssetRequest> {
+    let name_prefix = "Galactic Explorer #".to_string();
+    let creator = "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string();
+
+    (1..=100)
+        .map(|iteration| {
+            let (name, creator) = (format!("{name_prefix}{iteration}"), creator.clone());
+            CreateAssetRequest::with_name_and_creator(&name, &creator)
+        })
+        .collect()
 }
 
 pub async fn fill_database_with_test_data(

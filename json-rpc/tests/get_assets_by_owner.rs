@@ -14,6 +14,15 @@ use util::publickey::PublicKeyExt;
 
 mod utils;
 
+async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> AssetList {
+    serde_json::from_value::<AssetList>(
+        get_asset_by_owner(req_params, ctx.clone())
+            .await
+            .expect("Failed to get assets."),
+    )
+    .expect("Failed serialize DAO assets..")
+}
+
 #[tokio::test]
 async fn get_assets_by_owner_sorting_by_created_date_desc() {
     let t_env = TestEnvironmentCfg::with_all().start().await;
@@ -422,13 +431,4 @@ async fn check_pagination(app_ctx: ArcedAppCtx, asset_owner: String) {
     combined_10_30.extend(after_first_20.items.clone());
 
     assert_eq!(combined_10_30, first_30.items[10..]);
-}
-
-async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> AssetList {
-    serde_json::from_value::<AssetList>(
-        get_asset_by_owner(req_params, ctx.clone())
-            .await
-            .expect("Failed to get assets."),
-    )
-    .expect("Failed serialize DAO assets..")
 }

@@ -1,8 +1,9 @@
 use crate::utils::{
     create_assets_with_same_creator_requests, extract_asset_name_from_das_asset, fill_database_with_test_data,
+    get_first_asset_name,
 };
 use json_rpc::config::app_config::AppConfig;
-use json_rpc::config::app_context::AppCtx;
+use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::endpoints::errors::DasApiError;
 use json_rpc::endpoints::get_nft::get_asset_by_creator;
 use json_rpc::endpoints::types::{AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAssetsByCreator};
@@ -234,4 +235,82 @@ async fn get_assets_by_creator_with_invalid_page() {
         .expect_err("Should fail.");
 
     assert_eq!(expected_err, DasApiError::PageTooBig(DEFAULT_MAX_PAGE_LIMIT).into());
+}
+
+#[tokio::test]
+async fn get_assets_by_creator_using_cursor() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    // Put some assets for tests
+    let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_creator_requests).await;
+
+    // Get asset owner
+    let asset_creator = data_from_db.first().unwrap().asset.creator.to_string();
+
+    let mut assets_from_db_by_name = data_from_db
+        .iter()
+        .map(|asset| asset.asset.name.clone())
+        .collect::<Vec<String>>();
+
+    let first_asset_name = assets_from_db_by_name.pop().unwrap();
+    let payload = GetAssetsByCreator {
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        limit: Some(1),
+        page: None,
+        before: None,
+        after: None,
+        cursor: None,
+    };
+    let first_res = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+    // Expecting to get last element from db because we're iterating from new to old
+    assert_eq!(get_first_asset_name(&first_res), first_asset_name);
+
+    let cursor_to_call_next = first_res.cursor.clone().unwrap();
+    let mut payload = GetAssetsByCreator {
+        creator_address: asset_creator.clone(),
+        only_verified: None,
+        sort_by: None,
+        limit: Some(1),
+        page: None,
+        before: None,
+        after: None,
+        cursor: Some(cursor_to_call_next),
+    };
+
+    // Iterate be cursor for the remaining elements.
+    // Using reversed `assets_from_db_by_name` because we cannot use `.pop()` inside loop
+    for asset_from_db_by_name in assets_from_db_by_name.into_iter().rev() {
+        let first_res = get_asset_list_by_creator(payload, app_ctx.clone()).await;
+
+        assert_eq!(get_first_asset_name(&first_res), asset_from_db_by_name);
+
+        payload = GetAssetsByCreator {
+            creator_address: asset_creator.clone(),
+            only_verified: None,
+            sort_by: None,
+            limit: Some(1),
+            page: None,
+            before: None,
+            after: None,
+            cursor: first_res.cursor,
+        };
+    }
+
+    // Expected that next element by cursor will be empty
+    let empty_list = get_asset_list_by_creator(payload, app_ctx.clone()).await.items;
+    assert!(empty_list.is_empty());
+}
+
+async fn get_asset_list_by_creator(req_params: GetAssetsByCreator, ctx: ArcedAppCtx) -> AssetList {
+    serde_json::from_value::<AssetList>(
+        get_asset_by_creator(req_params, ctx.clone())
+            .await
+            .expect("Failed to get assets."),
+    )
+    .expect("Failed serialize DAO assets..")
 }

@@ -4,7 +4,7 @@ use entities::l2::PublicKey;
 use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_context::ArcedAppCtx;
 use json_rpc::endpoints::rpc_asset_models::Asset;
-use json_rpc::endpoints::types::JsonRpcError;
+use json_rpc::endpoints::types::{AssetList, JsonRpcError};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use util::publickey::PublicKeyExt;
@@ -217,4 +217,21 @@ async fn create_asset(req_params: CreateAssetRequest, ctx: ArcedAppCtx) -> Resul
                 .and_then(|collection| PublicKey::from_bs58(&collection)),
         )
         .await?)
+}
+
+pub fn get_first_asset_name(asset_list: &AssetList) -> String {
+    serde_json::from_value(
+        asset_list
+            .items
+            .first()
+            .cloned()
+            .unwrap()
+            .content
+            .unwrap()
+            .metadata
+            .get_item("name")
+            .unwrap()
+            .clone(),
+    )
+    .unwrap()
 }

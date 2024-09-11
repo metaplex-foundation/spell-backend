@@ -1,6 +1,6 @@
 use crate::utils::{
     create_assets_with_same_owner_requests, create_assets_with_same_owner_requests_with_random_values,
-    extract_asset_name_from_das_asset, fill_database_with_test_data,
+    extract_asset_name_from_das_asset, fill_database_with_test_data, get_first_asset_name,
 };
 use json_rpc::config::app_config::AppConfig;
 use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
@@ -431,21 +431,4 @@ async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx)
             .expect("Failed to get assets."),
     )
     .expect("Failed serialize DAO assets..")
-}
-
-fn get_first_asset_name(asset_list: &AssetList) -> String {
-    serde_json::from_value(
-        asset_list
-            .items
-            .first()
-            .cloned()
-            .unwrap()
-            .content
-            .unwrap()
-            .metadata
-            .get_item("name")
-            .unwrap()
-            .clone(),
-    )
-    .unwrap()
 }

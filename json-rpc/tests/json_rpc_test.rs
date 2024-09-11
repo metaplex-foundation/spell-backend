@@ -1,7 +1,8 @@
 mod utils;
 
 use crate::utils::{
-    create_asset, create_assets_with_same_owner_requests, create_different_assets_requests, CreateAssetRequest,
+    create_asset, create_assets_with_same_owner_requests, create_assets_with_same_owner_requests_with_random_values,
+    create_different_assets_requests, CreateAssetRequest,
 };
 use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_config::AppConfig;
@@ -10,10 +11,10 @@ use json_rpc::endpoints::errors::DasApiError;
 use json_rpc::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_owner};
 use json_rpc::endpoints::rpc_asset_models::Asset;
 use json_rpc::endpoints::types::{
-    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner, JsonRpcError,
+    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner,
 };
 use json_rpc::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
-use serde_json::Value;
+use serde_json::{json, Value};
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
@@ -421,23 +422,25 @@ async fn get_assets_by_owner_with_invalid_page() {
 }
 
 #[tokio::test]
-async fn get_assets_owner_by_cursor() {
+async fn get_assets_by_owner_using_cursor() {
     let t_env = TestEnvironmentCfg::with_all().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
+    // Put some assets for tests
     let data_from_db = fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests).await;
 
+    // Get asset owner
     let asset_owner = data_from_db.first().unwrap().asset.owner.to_string();
 
-    let mut expected_order_of_assets_by_name = data_from_db
+    let mut assets_from_db_by_name = data_from_db
         .iter()
         .map(|asset| asset.asset.name.clone())
         .collect::<Vec<String>>();
 
-    let first_asset_owner = expected_order_of_assets_by_name.pop().unwrap();
-    let request_params = GetAssetsByOwner {
+    let first_asset_name = assets_from_db_by_name.pop().unwrap();
+    let payload = GetAssetsByOwner {
         owner_address: asset_owner.clone(),
         sort_by: None,
         limit: Some(1),
@@ -446,17 +449,13 @@ async fn get_assets_owner_by_cursor() {
         after: None,
         cursor: None,
     };
-
-    let first_res = get_asset_by_owner(request_params, app_ctx.clone())
-        .await
-        .expect("Failed to get assets.");
-    let first_res = serde_json::from_value::<AssetList>(first_res).expect("Failed serialize DAO assets..");
-
-    assert_eq!(get_first_asset_name(&first_res), first_asset_owner);
+    let first_res = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+    // Expecting to get last element from db because we're iterating from new to old
+    assert_eq!(get_first_asset_name(&first_res), first_asset_name);
 
     let cursor_to_call_next = first_res.cursor.clone().unwrap();
-    let request_params = GetAssetsByOwner {
-        owner_address: asset_owner,
+    let mut payload = GetAssetsByOwner {
+        owner_address: asset_owner.clone(),
         sort_by: None,
         limit: Some(1),
         page: None,
@@ -465,12 +464,167 @@ async fn get_assets_owner_by_cursor() {
         cursor: Some(cursor_to_call_next),
     };
 
-    let second_res = get_asset_by_owner(request_params, app_ctx.clone())
-        .await
-        .expect("Failed to get assets.");
-    let first_res = serde_json::from_value::<AssetList>(second_res).expect("Failed serialize DAO assets..");
+    // Iterate be cursor for the remaining elements.
+    // Using reversed `assets_from_db_by_name` because we cannot use `.pop()` inside loop
+    for asset_from_db_by_name in assets_from_db_by_name.into_iter().rev() {
+        let first_res = get_asset_list_by_owner(payload, app_ctx.clone()).await;
 
-    assert_eq!(get_first_asset_name(&first_res), expected_order_of_assets_by_name.pop().unwrap());
+        assert_eq!(get_first_asset_name(&first_res), asset_from_db_by_name);
+
+        payload = GetAssetsByOwner {
+            owner_address: asset_owner.clone(),
+            sort_by: None,
+            limit: Some(1),
+            page: None,
+            before: None,
+            after: None,
+            cursor: first_res.cursor,
+        };
+    }
+
+    // Expected that next element by cursor will be empty
+    let empty_list = get_asset_list_by_owner(payload, app_ctx.clone()).await.items;
+    assert!(empty_list.is_empty());
+}
+
+#[tokio::test]
+async fn get_assets_by_owner_with_pagination() {
+    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+        .await
+        .arced();
+
+    // Put some assets for tests
+    let data_from_db =
+        fill_database_with_test_data(app_ctx.clone(), create_assets_with_same_owner_requests_with_random_values).await;
+
+    assert!(data_from_db.len().eq(&100));
+
+    let asset_owner_address = data_from_db.first().unwrap().asset.owner.to_string();
+
+    check_pagination(app_ctx.clone(), asset_owner_address).await;
+}
+
+async fn check_pagination(app_ctx: ArcedAppCtx, asset_owner: String) {
+    let payload = GetAssetsByOwner {
+        limit: Some(10),
+        page: None,
+        before: None,
+        after: None,
+        owner_address: asset_owner.clone(),
+        sort_by: None,
+        cursor: None,
+    };
+    let first_10 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    println!("second_10 start here ");
+    println!("{}", json!(&first_10));
+    println!("second_10 end here ");
+
+    let payload = GetAssetsByOwner {
+        limit: Some(10),
+        page: None,
+        before: None,
+        owner_address: asset_owner.clone(),
+        cursor: first_10.cursor.clone(),
+        sort_by: None,
+        after: None,
+    };
+    let second_10 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByOwner {
+        limit: Some(20),
+        page: None,
+        before: None,
+        after: None,
+        owner_address: asset_owner.clone(),
+        sort_by: None,
+        cursor: None,
+    };
+    let first_20 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let mut first_two_resp = first_10.items;
+    first_two_resp.extend(second_10.items.clone());
+
+    assert_eq!(first_20.items, first_two_resp);
+
+    let payload = GetAssetsByOwner {
+        limit: Some(9),
+        owner_address: asset_owner.clone(),
+        before: first_20.cursor.clone(),
+        after: None,
+        sort_by: None,
+        page: None,
+        cursor: None,
+    };
+    let first_10_reverse = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let reversed = first_10_reverse.items;
+    let mut second_10_resp = second_10.items.clone();
+    // pop because we select 9 assets
+    // select 9 because request with before do not return asset which is in before parameter
+    second_10_resp.remove(0);
+    assert_eq!(reversed, second_10_resp);
+
+    let payload = GetAssetsByOwner {
+        owner_address: asset_owner.clone(),
+        sort_by: None,
+        limit: None,
+        after: first_10.cursor.clone(),
+        before: first_20.cursor,
+        cursor: None,
+        page: None,
+    };
+    let first_10_before_after = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    assert_eq!(first_10_before_after.items, second_10.items);
+
+    let payload = GetAssetsByOwner {
+        limit: Some(10),
+        page: None,
+        owner_address: asset_owner.clone(),
+        after: first_10.cursor,
+        sort_by: None,
+        before: None,
+        cursor: None,
+    };
+    let after_first_10 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByOwner {
+        limit: Some(10),
+        page: None,
+        owner_address: asset_owner.clone(),
+        after: after_first_10.after,
+        sort_by: None,
+        before: None,
+        cursor: None,
+    };
+    let after_first_20 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let payload = GetAssetsByOwner {
+        limit: Some(30),
+        page: None,
+        before: None,
+        after: None,
+        owner_address: asset_owner.clone(),
+        sort_by: None,
+        cursor: None,
+    };
+    let first_30 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
+
+    let mut combined_10_30 = after_first_10.items;
+    combined_10_30.extend(after_first_20.items.clone());
+
+    assert_eq!(combined_10_30, first_30.items[10..]);
+}
+
+async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> AssetList {
+    serde_json::from_value::<AssetList>(
+        get_asset_by_owner(req_params, ctx.clone())
+            .await
+            .expect("Failed to get assets."),
+    )
+    .expect("Failed serialize DAO assets..")
 }
 
 fn get_first_asset_name(asset_list: &AssetList) -> String {

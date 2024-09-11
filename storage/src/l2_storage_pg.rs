@@ -186,13 +186,23 @@ impl L2Storage for L2StoragePg {
 
         query_builder.push(" LIMIT ").push_bind(limit as i64);
 
-        Ok(query_builder
-            .build()
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|r| from_row(&r))
-            .collect::<Result<Vec<L2Asset>, _>>()?)
+        match is_order_reversed {
+            true => query_builder
+                .build()
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|r| from_row(&r))
+                .rev()
+                .collect::<Result<Vec<L2Asset>, _>>(),
+            false => query_builder
+                .build()
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|r| from_row(&r))
+                .collect::<Result<Vec<L2Asset>, _>>(),
+        }
     }
 }
 
@@ -203,30 +213,11 @@ fn add_timestamp_and_pubkey_comparison(
     after: Option<&String>,
 ) -> anyhow::Result<()> {
     match &asset_sorting.sort_by {
-        AssetSortBy::Created => {
+        AssetSortBy::Created | AssetSortBy::Updated => {
             if let Some(before) = before {
                 let comparison = match asset_sorting.sort_direction {
-                    AssetSortDirection::Asc => " > ",
-                    AssetSortDirection::Desc => " < ",
-                };
-
-                add_timestamp_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
-            }
-
-            if let Some(after) = after {
-                let comparison = match asset_sorting.sort_direction {
-                    AssetSortDirection::Asc => " > ",
-                    AssetSortDirection::Desc => " < ",
-                };
-
-                add_timestamp_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
-            }
-        }
-        AssetSortBy::Updated => {
-            if let Some(before) = before {
-                let comparison = match asset_sorting.sort_direction {
-                    AssetSortDirection::Asc => " > ",
-                    AssetSortDirection::Desc => " < ",
+                    AssetSortDirection::Asc => " < ",
+                    AssetSortDirection::Desc => " > ",
                 };
 
                 add_timestamp_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;

@@ -46,10 +46,12 @@ impl From<DasApiError> for JsonRpcError {
             },
             DasApiError::PageTooBig(max_limit) => Self {
                 code: ErrorCode::ServerError(STANDARD_ERROR_CODE),
-                message: format!("
+                message: format!(
+                    "
                     Page number is too big. Up to '{max_limit}' pages are supported with this kind of pagination.
                     Please use a different pagination(before/after/cursor).
-                "),
+                "
+                ),
                 data: None,
             },
         }

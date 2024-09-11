@@ -37,6 +37,7 @@ pub enum AssetSortDirection {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum AssetSortBy {
     #[default]
     Created,

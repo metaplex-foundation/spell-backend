@@ -18,7 +18,16 @@ impl S3Container {
 
         {
             let s3_client = s3_client(&node).await;
-            s3_client.create_bucket().bucket(BUCKET).send().await.unwrap();
+
+            // This retry should fix `TCP connection error` from `hyper`
+            let mut retry_counter = 0;
+            while let Err(_) = s3_client.create_bucket().bucket(BUCKET).send().await {
+                if retry_counter >= 3 {
+                    break;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                retry_counter += 1;
+            }
         }
 
         Ok(S3Container { node })

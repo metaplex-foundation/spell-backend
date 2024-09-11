@@ -161,7 +161,7 @@ fn verify_page(limit: Option<u32>) -> Result<Option<u32>, DasApiError> {
             } else {
                 Err(DasApiError::PageTooBig(DEFAULT_MAX_PAGE_LIMIT))
             }
-        },
+        }
         None => Ok(None),
     }
 }

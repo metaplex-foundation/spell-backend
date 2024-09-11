@@ -16,6 +16,23 @@ pub struct CreateAssetRequest {
     pub collection: Option<String>,
 }
 
+impl CreateAssetRequest {
+    const METADATA_JSON: &'static str = r#"
+        {"description": "An astronaut exploring distant galaxies.", "image": "https://example.com/images/galactic_explorer_1.png"}
+    "#;
+
+    fn with_name_and_owner(name: &str, owner: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            metadata_json: Self::METADATA_JSON.to_string(),
+            owner: owner.to_string(),
+            creator: PublicKey::new_unique().to_string(),
+            authority: PublicKey::new_unique().to_string(),
+            collection: Some(PublicKey::new_unique().to_string()),
+        }
+    }
+}
+
 pub fn create_assets_with_same_owner_requests() -> Vec<CreateAssetRequest> {
     vec![
         CreateAssetRequest {
@@ -59,6 +76,18 @@ pub fn create_assets_with_same_owner_requests() -> Vec<CreateAssetRequest> {
             collection: Some("6y8P8QcG4T6RfL9FpL8zTrR5D2JvK4gH5D7wG5s8FkY3".to_string()),
         },
     ]
+}
+
+pub fn create_assets_with_same_owner_requests_with_random_values() -> Vec<CreateAssetRequest> {
+    let name_prefix = "Galactic Explorer #".to_string();
+    let owner = "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string();
+
+    (1..=100)
+        .map(|iteration| {
+            let (name, owner) = (format!("{name_prefix}{iteration}"), owner.clone());
+            CreateAssetRequest::with_name_and_owner(&name, &owner)
+        })
+        .collect()
 }
 
 pub fn create_different_assets_requests() -> Vec<CreateAssetRequest> {

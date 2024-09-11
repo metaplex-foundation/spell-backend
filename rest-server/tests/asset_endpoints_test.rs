@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
+    use std::{collections::HashMap, net::Ipv4Addr};
     use std::sync::Arc;
 
     use actix_web::{body::MessageBody, dev::ServiceResponse, http::StatusCode, test, web, App};
-    use entities::{l2::PublicKey, rpc_asset_models::Asset};
+    use entities::api_key::ApiKeys;
+    use entities::{api_key::{ApiKey, Username}, l2::PublicKey, rpc_asset_models::Asset};
     use rest_server::{
-        endpoints::l2_assets::{
+        config::app_context::ApiKeysProviderCtx, endpoints::l2_assets::{
             create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, UpdateAssetRequest,
-        },
-        web::app::create_app_state,
+        }, web::app::create_app_state
     };
     use setup::{TestEnvironment, TestEnvironmentCfg};
     use util::config::{EnvProfile, JsonRpc, Settings};
@@ -22,8 +22,12 @@ mod tests {
         let cfg = make_test_cfg(&t_env).await;
         let state = Arc::new(create_app_state(cfg).await);
 
+        let api_keys_provider_ctx =
+            ApiKeysProviderCtx::from_memory(ApiKeys::from(HashMap::from([(ApiKey::new("111"), Username::new(""))])));
+
         let app = test::init_service(
             App::new()
+                .app_data(web::Data::new(api_keys_provider_ctx))
                 .app_data(web::Data::new(state))
                 .service(create_asset)
                 .service(update_asset)
@@ -51,6 +55,7 @@ mod tests {
 
             let req = test::TestRequest::post()
                 .uri("/asset")
+                .append_header(("x-api-key", "111"))
                 .set_json(req_payload)
                 .to_request();
 
@@ -125,6 +130,7 @@ mod tests {
 
             let req = test::TestRequest::put()
                 .uri(format!("/asset/{}", created_asset.id).as_str())
+                .append_header(("x-api-key", "111"))
                 .set_json(req_payload)
                 .to_request();
 

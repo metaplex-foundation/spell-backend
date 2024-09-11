@@ -146,8 +146,8 @@ impl L2Storage for L2StoragePg {
         owner_pubkey: &PublicKey,
         sorting: &AssetSorting,
         limit: u32,
-        before: Option<&String>,
-        after: Option<&String>,
+        before: Option<&str>,
+        after: Option<&str>,
     ) -> anyhow::Result<Vec<L2Asset>> {
         let mut query_builder = QueryBuilder::new(
             r#"
@@ -209,8 +209,8 @@ impl L2Storage for L2StoragePg {
 fn add_timestamp_and_pubkey_comparison(
     mut query_builder: &mut QueryBuilder<'_, Postgres>,
     asset_sorting: &AssetSorting,
-    before: Option<&String>,
-    after: Option<&String>,
+    before: Option<&str>,
+    after: Option<&str>,
 ) -> anyhow::Result<()> {
     match &asset_sorting.sort_by {
         AssetSortBy::Created | AssetSortBy::Updated => {

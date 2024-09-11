@@ -86,7 +86,7 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
 
     let l2_assets = ctx
         .asset_service
-        .fetch_assets_by_owner(owner_address, &sorting, limit, before.as_ref(), after.as_ref())
+        .fetch_assets_by_owner(owner_address, &sorting, limit, before.as_deref(), after.as_deref())
         .await
         .map_err(|_| DasApiError::DatabaseError)?
         .into_iter()

@@ -78,7 +78,7 @@ pub trait AssetService {
         owner_pubkey: PublicKey,
         sorting: &AssetSorting,
         limit: u32,
-        before: Option<&String>,
-        after: Option<&String>,
+        before: Option<&str>,
+        after: Option<&str>,
     ) -> anyhow::Result<Vec<L2AssetInfo>>;
 }

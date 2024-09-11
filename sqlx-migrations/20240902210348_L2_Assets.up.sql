@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS l2_assets_v1 (
     CONSTRAINT pk_asset_pubkey PRIMARY KEY (asset_pubkey)
 );
 
+CREATE INDEX idx_asset_owner_create_timestamp ON l2_assets_v1(asset_owner, asset_create_timestamp);
 
 -- Used to track numbers of HD wallets
 -- solana_sdk::derivation_path::DerivationPath::new_bip44 talkes u32 arguments

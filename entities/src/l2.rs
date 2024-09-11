@@ -36,6 +36,46 @@ pub struct L2Asset {
     pub pib44_address_num: u32,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct AssetSorting {
+    pub sort_by: AssetSortBy,
+    pub sort_direction: AssetSortDirection,
+}
+
+#[derive(Clone, Debug, Default)]
+pub enum AssetSortBy {
+    #[default]
+    Created,
+    Updated,
+}
+
+impl ToString for AssetSortBy {
+    fn to_string(&self) -> String {
+        match self {
+            AssetSortBy::Created => "asset_create_timestamp",
+            AssetSortBy::Updated => "asset_update_timestamp",
+        }
+        .to_string()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub enum AssetSortDirection {
+    Asc,
+    #[default]
+    Desc,
+}
+
+impl ToString for AssetSortDirection {
+    fn to_string(&self) -> String {
+        match self {
+            AssetSortDirection::Asc => "ASC",
+            AssetSortDirection::Desc => "DESC",
+        }
+        .to_string()
+    }
+}
+
 pub fn pubkey_to_string(pubkey: PublicKey) -> String {
     bs58::encode(pubkey).into_string()
 }

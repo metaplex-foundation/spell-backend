@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use entities::l2::{L2Asset, PublicKey};
+use entities::l2::{AssetSorting, L2Asset, PublicKey};
 
 /// Storage interfaces for L2 assets managing
 #[async_trait]
@@ -7,6 +7,14 @@ pub trait L2Storage {
     async fn save(&self, asset: &L2Asset) -> anyhow::Result<()>;
     async fn find(&self, pubkey: &PublicKey) -> anyhow::Result<Option<L2Asset>>;
     async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>>;
+    async fn find_by_owner(
+        &self,
+        owner_pubkey: &PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2Asset>>;
 }
 
 #[derive(Debug, PartialEq)]

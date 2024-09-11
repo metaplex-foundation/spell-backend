@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 entities = { path = "../entities"}
 interfaces = { path = "../interfaces" }
+util = { path = "../util" }
 
 futures = { workspace = true }
 

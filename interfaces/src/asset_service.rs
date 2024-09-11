@@ -1,4 +1,4 @@
-use entities::l2::{L2Asset, PublicKey};
+use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,4 +63,22 @@ pub trait AssetService {
 
     /// Fetch NFT metadata JSON for given asset
     async fn fetch_metadata(&self, asset_pubkey: PublicKey) -> anyhow::Result<Option<String>>;
+
+    /// Fetches existing L2 assets by owner.
+    /// This specification was used for implementation:
+    ///
+    /// https://docs.extrnode.com/das_api/get_assets_by_owner
+    ///
+    /// ## Args:
+    /// * `owner_pubkey` - public key of asset owner
+    /// * `sorting` - sorting params for response
+    /// * `limit` - limit of returning assets
+    async fn fetch_assets_by_owner(
+        &self,
+        owner_pubkey: PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2AssetInfo>>;
 }

@@ -1,11 +1,11 @@
-use entities::l2::{L2Asset, PublicKey};
+use entities::l2::{AssetSortBy, AssetSortDirection, AssetSorting, L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgRow},
-    ConnectOptions, PgPool, Row,
+    ConnectOptions, PgPool, Postgres, QueryBuilder, Row,
 };
-
 use tracing::log::LevelFilter;
+use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
 
 pub struct L2StoragePg {
     pub pool: PgPool,
@@ -13,7 +13,7 @@ pub struct L2StoragePg {
 
 impl L2StoragePg {
     pub async fn new_from_url(url: &str, min_connections: u32, max_connections: u32) -> anyhow::Result<L2StoragePg> {
-        let mut options: PgConnectOptions = url.parse().unwrap();
+        let mut options: PgConnectOptions = url.parse()?;
         options.log_statements(LevelFilter::Off);
         options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
         options = options.extra_float_digits(None); // needed for Pgbouncer
@@ -35,7 +35,7 @@ impl L2StoragePg {
 #[async_trait::async_trait]
 impl L2Storage for L2StoragePg {
     async fn save(&self, asset: &L2Asset) -> anyhow::Result<()> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 INSERT INTO l2_assets_v1
                 (
@@ -80,7 +80,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn find(&self, pubkey: &PublicKey) -> anyhow::Result<Option<L2Asset>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 SELECT
                     asset_pubkey,
@@ -108,7 +108,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
+        let mut query_builder = QueryBuilder::new(
             r#"
                 SELECT
                     asset_pubkey,
@@ -141,6 +141,133 @@ impl L2Storage for L2StoragePg {
             .map(|r| from_row(&r))
             .collect::<Result<Vec<L2Asset>, _>>()?)
     }
+
+    async fn find_by_owner(
+        &self,
+        owner_pubkey: &PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2Asset>> {
+        let mut query_builder = QueryBuilder::new(
+            r#"
+                SELECT
+                    asset_pubkey,
+                    asset_name,
+                    asset_owner,
+                    asset_creator,
+                    asset_collection,
+                    asset_authority,
+                    asset_create_timestamp,
+                    pib44_account_num,
+                    pib44_address_num
+                FROM l2_assets_v1
+                WHERE asset_owner =
+            "#,
+        );
+
+        query_builder.push_bind(owner_pubkey);
+
+        add_timestamp_and_pubkey_comparison(&mut query_builder, &sorting, before, after)?;
+
+        let is_order_reversed = before.is_some() && after.is_none();
+
+        let direction = match (&sorting.sort_direction, is_order_reversed) {
+            (AssetSortDirection::Asc, true) | (AssetSortDirection::Desc, false) => " DESC ",
+            (AssetSortDirection::Asc, false) | (AssetSortDirection::Desc, true) => " ASC ",
+        };
+
+        query_builder
+            .push(" ORDER BY ")
+            .push(sorting.sort_by.to_string())
+            .push(direction)
+            .push(", asset_pubkey ")
+            .push(direction);
+
+        query_builder.push(" LIMIT ").push_bind(limit as i64);
+
+        match is_order_reversed {
+            true => query_builder
+                .build()
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|r| from_row(&r))
+                .rev()
+                .collect::<Result<Vec<L2Asset>, _>>(),
+            false => query_builder
+                .build()
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|r| from_row(&r))
+                .collect::<Result<Vec<L2Asset>, _>>(),
+        }
+    }
+}
+
+fn add_timestamp_and_pubkey_comparison(
+    mut query_builder: &mut QueryBuilder<'_, Postgres>,
+    asset_sorting: &AssetSorting,
+    before: Option<&str>,
+    after: Option<&str>,
+) -> anyhow::Result<()> {
+    match &asset_sorting.sort_by {
+        AssetSortBy::Created | AssetSortBy::Updated => {
+            if let Some(before) = before {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " < ",
+                    AssetSortDirection::Desc => " > ",
+                };
+
+                add_timestamp_and_key_comparison(&before, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+
+            if let Some(after) = after {
+                let comparison = match asset_sorting.sort_direction {
+                    AssetSortDirection::Asc => " > ",
+                    AssetSortDirection::Desc => " < ",
+                };
+
+                add_timestamp_and_key_comparison(&after, comparison, &asset_sorting.sort_by, &mut query_builder)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn add_timestamp_and_key_comparison(
+    key: &str,
+    comparison: &str,
+    order_field: &AssetSortBy,
+    query_builder: &mut QueryBuilder<'_, Postgres>,
+) -> anyhow::Result<()> {
+    let (timestamp, pubkey) = decode_timestamp_and_asset_pubkey(key)?;
+
+    let order_field = order_field.to_string();
+    let comparison = comparison.to_string();
+
+    query_builder
+        .push(" AND (")
+        .push(order_field.clone())
+        .push(comparison.clone())
+        .push_bind(timestamp);
+
+    query_builder
+        .push(" OR (")
+        .push(order_field)
+        .push(" = ")
+        .push_bind(timestamp);
+
+    query_builder
+        .push(" AND asset_pubkey ")
+        .push(comparison)
+        .push_bind(pubkey)
+        .push("))");
+
+    Ok(())
 }
 
 fn from_row(row: &PgRow) -> anyhow::Result<L2Asset> {

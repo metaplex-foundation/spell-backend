@@ -15,6 +15,7 @@ use std::{
 const DEFAULT_CONFIG_FILE_PREFIX: &str = "config";
 const DEFAULT_CONFIG_FILE_NAME: &str = "default.toml";
 
+// TODO: Change back to String to support custom profiles
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum EnvProfile {
     Prod,
@@ -25,14 +26,15 @@ pub enum EnvProfile {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RestServerCfg {
     pub port: u16,
-    pub host: Ipv4Addr,
+    pub host: Ipv4Addr, // TODO: delete since it should be a persistent hostname
     pub log_level: String,
+    pub base_url: String, // e.g. https://spell-backend:8080
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JsonRpc {
     pub port: u16,
-    pub host: Ipv4Addr,
+    pub host: Ipv4Addr, // TODO: delete?
     pub log_level: String,
 }
 

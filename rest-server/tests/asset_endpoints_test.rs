@@ -4,11 +4,10 @@ mod tests {
     use std::sync::Arc;
 
     use actix_web::{body::MessageBody, dev::ServiceResponse, http::StatusCode, test, web, App};
-    use entities::l2::PublicKey;
+    use entities::{l2::PublicKey, rpc_asset_models::Asset};
     use rest_server::{
         endpoints::l2_assets::{
-            create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, L2AssetInfoResponse,
-            UpdateAssetRequest,
+            create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, UpdateAssetRequest,
         },
         web::app::create_app_state,
     };
@@ -60,17 +59,27 @@ mod tests {
             extract_response(serv_resp)
         };
 
-        assert_eq!(created_asset.name.clone(), "name1".to_string());
-        assert_eq!(created_asset.medata_json.clone().unwrap(), metadata_json);
-        assert_eq!(created_asset.owner, bs58::encode(owner).into_string());
-        assert_eq!(created_asset.creator, bs58::encode(creator).into_string());
-        assert_eq!(created_asset.authority, bs58::encode(authority).into_string());
-        assert!(created_asset.collection.is_none());
+        assert_eq!(
+            created_asset
+                .content
+                .as_ref()
+                .unwrap()
+                .metadata
+                .get_item("name")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "name1"
+        );
+        assert_eq!(created_asset.ownership.owner, bs58::encode(owner).into_string());
+        assert_eq!(created_asset.creators.as_ref().unwrap()[0].address, bs58::encode(creator).into_string());
+        assert_eq!(created_asset.authorities.as_ref().unwrap()[0].address, bs58::encode(authority).into_string());
+        assert!(created_asset.grouping.is_none());
 
         // get asset
         let fetched_asset_1 = {
             let req = test::TestRequest::get()
-                .uri(format!("/asset/{}", created_asset.pubkey).as_str())
+                .uri(format!("/asset/{}", created_asset.id).as_str())
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
@@ -81,7 +90,23 @@ mod tests {
         assert_eq!(created_asset, fetched_asset_1);
 
         // new values
-        let new_metadata_json = "{ \"imgage\": \"http://some/img.png\"}".to_string();
+        let new_metadata_json = r#"
+            {
+                "name": "name2",
+                "description": "test description",
+                "image": "http://host/image.png",
+                "properties": {
+                    "files": [
+                        {
+                            "uri": "http://host/image.png",
+                            "type": "image/png"
+                        }
+                    ],
+                    "category": "image"
+                }
+            }
+        "#
+        .to_string();
         let new_owner = PublicKey::new_unique();
         let new_creator = PublicKey::new_unique();
         let new_authority = PublicKey::new_unique();
@@ -99,7 +124,7 @@ mod tests {
             };
 
             let req = test::TestRequest::put()
-                .uri(format!("/asset/{}", created_asset.pubkey).as_str())
+                .uri(format!("/asset/{}", created_asset.id).as_str())
                 .set_json(req_payload)
                 .to_request();
 
@@ -108,17 +133,59 @@ mod tests {
             extract_response(serv_resp)
         };
 
-        assert_eq!(updated_asset.name.clone(), "name2".to_string());
-        assert_eq!(updated_asset.medata_json.clone().unwrap(), new_metadata_json);
-        assert_eq!(updated_asset.owner, bs58::encode(new_owner).into_string());
-        assert_eq!(updated_asset.creator, bs58::encode(new_creator).into_string());
-        assert_eq!(updated_asset.authority, bs58::encode(new_authority).into_string());
-        assert_eq!(updated_asset.clone().collection.unwrap(), bs58::encode(new_collection).into_string());
+        assert_eq!(
+            updated_asset
+                .content
+                .as_ref()
+                .unwrap()
+                .metadata
+                .get_item("name")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "name2"
+        );
+        assert_eq!(updated_asset.ownership.owner, bs58::encode(new_owner).into_string());
+        assert_eq!(updated_asset.creators.as_ref().unwrap()[0].address, bs58::encode(new_creator).into_string());
+        assert_eq!(updated_asset.authorities.as_ref().unwrap()[0].address, bs58::encode(new_authority).into_string());
+        assert_eq!(
+            updated_asset.grouping.as_ref().unwrap()[0].clone().group_value.unwrap(),
+            bs58::encode(new_collection).into_string()
+        );
+        assert_eq!(
+            updated_asset
+                .content
+                .as_ref()
+                .unwrap()
+                .metadata
+                .get_item("description")
+                .unwrap(),
+            "test description"
+        );
+        assert_eq!(
+            updated_asset
+                .content
+                .as_ref()
+                .unwrap()
+                .links
+                .as_ref()
+                .unwrap()
+                .get("image")
+                .unwrap(),
+            "http://host/image.png"
+        );
+        assert_eq!(
+            updated_asset.content.as_ref().unwrap().files.as_ref().unwrap()[0]
+                .uri
+                .as_ref()
+                .unwrap(),
+            "http://host/image.png"
+        );
 
         // get asset again
         let fetched_asset_2 = {
             let req = test::TestRequest::get()
-                .uri(format!("/asset/{}", created_asset.pubkey).as_str())
+                .uri(format!("/asset/{}", created_asset.id).as_str())
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
@@ -131,7 +198,7 @@ mod tests {
         // get metadata json separately
         let fetched_metadata = {
             let req = test::TestRequest::get()
-                .uri(format!("/asset/{}/metadata.json", created_asset.pubkey).as_str())
+                .uri(format!("/asset/{}/metadata.json", created_asset.id).as_str())
                 .to_request();
 
             let serv_resp = test::call_service(&app, req).await;
@@ -139,12 +206,17 @@ mod tests {
             String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap()
         };
 
-        assert_eq!(fetched_metadata, fetched_asset_2.medata_json.unwrap());
+        assert_eq!(fetched_metadata, new_metadata_json);
     }
 
     async fn make_test_cfg(t_env: &TestEnvironment) -> Settings {
         Settings {
-            rest_server: RestServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
+            rest_server: RestServerCfg {
+                port: 8080,
+                host: Ipv4Addr::LOCALHOST,
+                log_level: "DEBUG".to_string(),
+                base_url: "http://localhost".to_string(),
+            },
             database: t_env.database_cfg().await,
             obj_storage: t_env.obj_storage_cfg().await,
             env: EnvProfile::Local,
@@ -152,7 +224,7 @@ mod tests {
         }
     }
 
-    fn extract_response(serv_resp: ServiceResponse) -> L2AssetInfoResponse {
+    fn extract_response(serv_resp: ServiceResponse) -> Asset {
         let resp_text = String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap();
         serde_json::from_str(&resp_text).unwrap()
     }

@@ -2,7 +2,7 @@ use crate::config::app_config::AppConfig;
 use actix_web::{web, App, HttpServer};
 use interfaces::asset_service::AssetService;
 use io::Result;
-use service::asset_service_impl::AssetServiceImpl;
+use service::{asset_service_impl::AssetServiceImpl, converter::AssetDtoConverter};
 use std::io;
 use std::sync::Arc;
 use storage::asset_storage_s3::S3Storage;
@@ -36,6 +36,7 @@ pub async fn start_up_rest_server(app_config: AppConfig) -> Result<()> {
 #[derive(Clone)]
 pub struct AppState {
     pub asset_service: Arc<dyn AssetService + Sync + Send>,
+    pub asset_converter: AssetDtoConverter,
 }
 
 pub async fn init_app_state() -> AppState {
@@ -73,5 +74,7 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
         blob_storage: obj_storage.clone(),
     });
 
-    AppState { asset_service }
+    let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url };
+
+    AppState { asset_service, asset_converter }
 }

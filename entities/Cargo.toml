@@ -5,5 +5,12 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
+jsonpath_lib = { workspace = true }
 chrono = { workspace = true }
+url = { workspace = true }
+mime_guess = { workspace = true }
+schemars = { workspace = true }
+tracing = { workspace = true }
 bs58 = { workspace = true }
+jsonrpc-core = { workspace = true }

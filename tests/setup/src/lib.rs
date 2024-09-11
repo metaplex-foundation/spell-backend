@@ -79,7 +79,12 @@ impl TestEnvironment {
 
     pub async fn make_test_cfg(&self) -> Settings {
         Settings {
-            rest_server: RestServerCfg { port: 8080, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
+            rest_server: RestServerCfg {
+                port: 8080,
+                host: Ipv4Addr::LOCALHOST,
+                log_level: "DEBUG".to_string(),
+                base_url: "http://localhost".to_string(),
+            },
             database: self.database_cfg().await,
             obj_storage: self.obj_storage_cfg().await,
             env: EnvProfile::Local,

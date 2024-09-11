@@ -7,6 +7,8 @@ pub trait PublicKeyExt {
     where
         Self: Sized;
 
+    fn to_bs58(&self) -> String;
+
     fn new_unique() -> Self;
 
     fn to_string(self) -> String;
@@ -15,6 +17,10 @@ pub trait PublicKeyExt {
 impl PublicKeyExt for PublicKey {
     fn from_bs58(bs58_str: &str) -> Option<PublicKey> {
         Pubkey::from_str(bs58_str).map(|pk| pk.to_bytes()).ok()
+    }
+
+    fn to_bs58(&self) -> String {
+        bs58::encode(self).into_string()
     }
 
     fn new_unique() -> PublicKey {

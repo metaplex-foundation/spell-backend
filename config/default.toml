@@ -2,6 +2,7 @@
 port = 8080
 host = "127.0.0.1"
 log_level = "DEBUG"
+base_url = "http://localhost:8080"
 
 [json_rpc_server]
 port = 8081

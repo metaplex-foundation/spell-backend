@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
 use util::publickey::PublicKeyExt;
 
-use crate::web::app::AppState;
+use crate::{auth::api_key_extractor::ApiKeyExtractor, web::app::AppState};
 
 const ASSET_NOT_FOUND: &str = "No asset found with given ID";
 
@@ -64,7 +64,11 @@ pub struct L2AssetInfoResponse {
 
 /// Creates an L2 asset.
 #[post("/asset")]
-pub async fn create_asset(req: web::Json<CreateAssetRequest>, state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn create_asset(
+    _: ApiKeyExtractor,
+    req: web::Json<CreateAssetRequest>,
+    state: web::Data<Arc<AppState>>,
+) -> impl Responder {
     let Some(owner) = PublicKey::from_bs58(&req.owner) else {
         return bad_request("owner contains malformed public key");
     };
@@ -88,8 +92,8 @@ pub async fn create_asset(req: web::Json<CreateAssetRequest>, state: web::Data<A
         .create_asset(&req.metadata_json, owner, creator, authority, &req.name, collection)
         .await
     {
-        Ok(asset) => {
-            let dto: L2AssetInfoResponse = asset.into();
+        Ok(L2AssetInfo { asset, metadata }) => {
+            let dto = state.asset_converter.to_response_asset_dto(&asset, metadata);
             HttpResponse::Created()
                 .content_type(ContentType::json())
                 .body(json!(dto).to_string())
@@ -100,6 +104,7 @@ pub async fn create_asset(req: web::Json<CreateAssetRequest>, state: web::Data<A
 
 #[put("/asset/{pubkey}")]
 pub async fn update_asset(
+    _: ApiKeyExtractor,
     asset_pubkey: web::Path<String>,
     req: web::Json<UpdateAssetRequest>,
     state: web::Data<Arc<AppState>>,
@@ -144,8 +149,8 @@ pub async fn update_asset(
         .await
     {
         Ok(mayble_l2) => match mayble_l2 {
-            Some(asset) => {
-                let dto: L2AssetInfoResponse = asset.into();
+            Some(L2AssetInfo { asset, metadata }) => {
+                let dto = state.asset_converter.to_response_asset_dto(&asset, metadata);
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
                     .body(json!(dto).to_string())
@@ -164,8 +169,8 @@ pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<Arc<App
 
     match state.asset_service.fetch_asset(pubkey).await {
         Ok(mayble_l2) => match mayble_l2 {
-            Some(asset) => {
-                let dto: L2AssetInfoResponse = asset.into();
+            Some(L2AssetInfo { asset, metadata }) => {
+                let dto = state.asset_converter.to_response_asset_dto(&asset, metadata);
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
                     .body(json!(dto).to_string())

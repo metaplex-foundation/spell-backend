@@ -5,7 +5,7 @@ Backend services for Spell Wallet.
 You can use 2 different approaches to set up local development.
 The first one using `Docker` and `SQLx`, the second one implies that everything will be installed locally. 
 
-## Local development setup via Docker and Sqlx
+## Local development setup via Docker and SQLx
 Follow the steps below to set up the local development environment using `Docker` and `sqlx`. All commands should be run from the root directory.
 
 ### 1. Set Up Docker Services
@@ -18,13 +18,16 @@ docker compose up db -d
 ### 2. Configure the Database with SQLx
 Set up the database with the following commands:
 ```shell
-sqlx database setup --source ./sqlx-migrations
-sqlx database setup --database-url postgres://postgres:postgres@localhost:5432/spell-wallet
-sqlx database create
+sqlx database setup --database-url postgres://postgres:postgres@localhost:5432/spell-wallet --source sqlx-migrations
 ```
-After setting up the database, apply the migrations:
+It will create the database specified and ***runs any pending migrations***, so it's unnecessary to run migrations manually. 
+
+
+### Make sure!
+If you want to run (or rollback) migrations you should specify `--source` option to `sqlx-migrations` folder.
+For example: 
 ```shell
-sqlx migrate run
+sqlx migrate run --source sqlx-migrations
 ```
 
 ### 3. Setup buckets in MinIo:
@@ -66,9 +69,11 @@ cargo r
 ```
 
 # Run all tests
+
+## In parallel
 Before running tests, it may be necessary to configure the test runtime limits due to potential high CPU and RAM usage when running tests in a Docker environment. This ensures that tests don't fail due to exceeding time limits.
 
-Test time limits are specified in milliseconds. For example, 300000 milliseconds equals 5 minutes.
+Test time limits are specified in milliseconds. For example, `300000 milliseconds equals 5 minutes`.
 
 To configure the test timeouts, run the following commands:
 ```shell
@@ -80,3 +85,11 @@ Once the environment is set, you can run all tests using:
 ```shell
 cargo test
 ```
+
+## In one thread
+You can run all tests sequentially, one by one, using the following command:
+```shell
+cargo test -- --test-threads 1
+```
+This may take more time to complete, but it will reduce CPU and memory usage by preventing parallel test execution.
+

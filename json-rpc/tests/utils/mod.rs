@@ -1,9 +1,12 @@
+#![allow(dead_code)]
+
 use entities::l2::PublicKey;
+use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_context::ArcedAppCtx;
-use json_rpc::endpoints::types::{JsonRpcError, JsonRpcResponse};
-use jsonrpc_core::ErrorCode;
+use json_rpc::endpoints::rpc_asset_models::Asset;
+use json_rpc::endpoints::types::JsonRpcError;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use std::error::Error;
 use util::publickey::PublicKeyExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -120,8 +123,88 @@ pub fn create_different_assets_requests() -> Vec<CreateAssetRequest> {
     ]
 }
 
-pub async fn create_asset(req_params: CreateAssetRequest, ctx: ArcedAppCtx) -> JsonRpcResponse {
-    let res = ctx
+pub fn create_assets_with_same_creator_requests() -> Vec<CreateAssetRequest> {
+    vec![
+        CreateAssetRequest {
+            name: "Galactic Explorer #1".to_string(),
+            metadata_json: r#"{"description": "An astronaut exploring distant galaxies.", "image": "https://example.com/images/galactic_explorer_1.png"}"#.to_string(),
+            owner: "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string(),
+            creator: "4R7zW4cV9D6x2nZyZ2DtCzF8H9jtyqG7nD8P8ZJ8ZxkM".to_string(),
+            authority: "6iDkdEY9HVY2XM4T6MbS6fpnX4AGv4sq9bhp28kRSrHf".to_string(),
+            collection: Some("2VST7tMfRf7X2YqAfoem5BzyrWn2CrZqQG8om4Fh9K6R".to_string()),
+        },
+        CreateAssetRequest {
+            name: "Galactic Explorer #2".to_string(),
+            metadata_json: r#"{"description": "A futuristic spaceship navigating through nebulae.", "image": "https://example.com/images/galactic_explorer_2.png"}"#.to_string(),
+            owner: "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string(),
+            creator: "4R7zW4cV9D6x2nZyZ2DtCzF8H9jtyqG7nD8P8ZJ8ZxkM".to_string(),
+            authority: "6iDkdEY9HVY2XM4T6MbS6fpnX4AGv4sq9bhp28kRSrHf".to_string(),
+            collection: Some("3j4P4Xq3xZ7FbZB6PHTrFQs6rCnzZ7BfqTp55pSt77rV".to_string()),
+        },
+        CreateAssetRequest {
+            name: "Galactic Explorer #3".to_string(),
+            metadata_json: r#"{"description": "A cosmic landscape with distant stars.", "image": "https://example.com/images/galactic_explorer_3.png"}"#.to_string(),
+            owner: "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string(),
+            creator: "4R7zW4cV9D6x2nZyZ2DtCzF8H9jtyqG7nD8P8ZJ8ZxkM".to_string(),
+            authority: "7T3prz4G8HT8JnY3n3K8GR7n7s3yzM2u5b6pqWfD6WnP".to_string(),
+            collection: Some("4kR9SmmSp4T86PvPLg3Jr7Erz5fD8sD83MwFzGJ4v4cD".to_string()),
+        },
+        CreateAssetRequest {
+            name: "Galactic Explorer #4".to_string(),
+            metadata_json: r#"{"description": "A robotic explorer on a distant planet.", "image": "https://example.com/images/galactic_explorer_4.png"}"#.to_string(),
+            owner: "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string(),
+            creator: "4R7zW4cV9D6x2nZyZ2DtCzF8H9jtyqG7nD8P8ZJ8ZxkM".to_string(),
+            authority: "8YkF9K6cLg77zSxVpN9rX4cqj6Jr7L6QK9Hg2PzQb1tP".to_string(),
+            collection: Some("5vWdY6Ht9F7RQ6J7j7C8rzKHs7G79NjZ8Jk4g3N2tPp5".to_string()),
+        },
+        CreateAssetRequest {
+            name: "Galactic Explorer #5".to_string(),
+            metadata_json: r#"{"description": "A space station orbiting a vibrant star.", "image": "https://example.com/images/galactic_explorer_5.png"}"#.to_string(),
+            owner: "9hfHbS34pV8eDPi8F3B9N6N9hvX2MjLs1B3fKm6vQeEq".to_string(),
+            creator: "4R7zW4cV9D6x2nZyZ2DtCzF8H9jtyqG7nD8P8ZJ8ZxkM".to_string(),
+            authority: "9FgR2z8vZ8N4D7qH6K7hL2W7X8uR3vT2b6qW3L9J9Pt".to_string(),
+            collection: Some("6y8P8QcG4T6RfL9FpL8zTrR5D2JvK4gH5D7wG5s8FkY3".to_string()),
+        },
+    ]
+}
+
+pub async fn fill_database_with_test_data(
+    app_ctx: ArcedAppCtx,
+    asset_creation_strategy: fn() -> Vec<CreateAssetRequest>,
+) -> Vec<L2AssetInfo> {
+    let requests_for_asset_creation = asset_creation_strategy();
+    let mut filled_data_from_db = Vec::with_capacity(requests_for_asset_creation.len());
+
+    for asset_req in requests_for_asset_creation {
+        filled_data_from_db.push(
+            create_asset(asset_req, app_ctx.clone())
+                .await
+                .unwrap_or_else(|e| panic!("Cannot create asset: {e}!")),
+        );
+    }
+
+    filled_data_from_db
+}
+
+pub fn form_asset_json_uri(pubkey: &str) -> String {
+    format!("127.0.0.1:8080/asset/{pubkey}/metadata.json")
+}
+
+pub fn extract_asset_name_from_das_asset(asset: Asset) -> String {
+    serde_json::from_value(
+        asset
+            .content
+            .expect("Content should be present")
+            .metadata
+            .get_item("name")
+            .expect("Content should be present")
+            .clone(),
+    )
+    .expect("Cannot call 'from_value'!")
+}
+
+async fn create_asset(req_params: CreateAssetRequest, ctx: ArcedAppCtx) -> Result<L2AssetInfo, Box<dyn Error>> {
+    Ok(ctx
         .asset_service
         .create_asset(
             &req_params.metadata_json,
@@ -133,8 +216,5 @@ pub async fn create_asset(req_params: CreateAssetRequest, ctx: ArcedAppCtx) -> J
                 .collection
                 .and_then(|collection| PublicKey::from_bs58(&collection)),
         )
-        .await
-        .map_err(|e| JsonRpcError { code: ErrorCode::InternalError, message: e.to_string(), data: None })?;
-
-    Ok(json!(res))
+        .await?)
 }

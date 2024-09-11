@@ -99,6 +99,7 @@ pub struct AssetList {
 pub struct GetAssetsByCreator {
     pub creator_address: String,
     pub only_verified: Option<bool>,
+    pub sort_by: Option<AssetSorting>,
     pub limit: Option<u32>,
     pub page: Option<u32>,
     pub before: Option<String>,

@@ -1,15 +1,21 @@
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, net::Ipv4Addr};
     use std::sync::Arc;
+    use std::{collections::HashMap, net::Ipv4Addr};
 
     use actix_web::{body::MessageBody, dev::ServiceResponse, http::StatusCode, test, web, App};
     use entities::api_key::ApiKeys;
-    use entities::{api_key::{ApiKey, Username}, l2::PublicKey, rpc_asset_models::Asset};
+    use entities::{
+        api_key::{ApiKey, Username},
+        l2::PublicKey,
+        rpc_asset_models::Asset,
+    };
     use rest_server::{
-        config::app_context::ApiKeysProviderCtx, endpoints::l2_assets::{
+        config::app_context::ApiKeysProviderCtx,
+        endpoints::l2_assets::{
             create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, UpdateAssetRequest,
-        }, web::app::create_app_state
+        },
+        web::app::create_app_state,
     };
     use setup::{TestEnvironment, TestEnvironmentCfg};
     use util::config::{EnvProfile, JsonRpc, Settings};

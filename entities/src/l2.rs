@@ -27,6 +27,9 @@ pub struct L2Asset {
     /// The timestamp of the L2 asset "mint"
     pub create_timestamp: chrono::NaiveDateTime, // Need timezone?
 
+    /// The timestamp of the L2 asset update
+    pub update_timestamp: chrono::NaiveDateTime, // Need timezone?
+
     /// Number that had been used as account in PIB44 derivation,
     /// to generate the asset pubkey
     pub pib44_account_num: u32,

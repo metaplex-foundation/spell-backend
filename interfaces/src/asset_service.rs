@@ -81,4 +81,13 @@ pub trait AssetService {
         before: Option<&str>,
         after: Option<&str>,
     ) -> anyhow::Result<Vec<L2AssetInfo>>;
+
+    async fn fetch_assets_by_creator(
+        &self,
+        creator_pubkey: PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2AssetInfo>>;
 }

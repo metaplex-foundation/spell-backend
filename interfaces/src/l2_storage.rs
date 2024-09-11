@@ -15,6 +15,14 @@ pub trait L2Storage {
         before: Option<&str>,
         after: Option<&str>,
     ) -> anyhow::Result<Vec<L2Asset>>;
+    async fn find_by_creator(
+        &self,
+        creator_pubkey: &PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2Asset>>;
 }
 
 #[derive(Debug, PartialEq)]

@@ -22,6 +22,7 @@ async fn test_save_fetch() {
         collection: None,
         authority: rand_pubkey(),
         create_timestamp: NaiveDateTime::default(),
+        update_timestamp: NaiveDateTime::default(),
         pib44_account_num: 1,
         pib44_address_num: 1,
     };

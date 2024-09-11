@@ -565,6 +565,7 @@ mod test {
                 collection: Some(collection),
                 authority: authority,
                 create_timestamp: NaiveDateTime::parse_from_str("2015-02-18 23:16:09", "%Y-%m-%d %H:%M:%S").unwrap(),
+                update_timestamp: NaiveDateTime::default(),
                 pib44_account_num: 1,
                 pib44_address_num: 1,
             },

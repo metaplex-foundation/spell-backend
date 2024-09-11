@@ -1,7 +1,7 @@
-version: '3.7'
 services:
-  db:
+  postgres:
     image: postgres:latest
+    container_name: postgres
     restart: always
     environment:
       - POSTGRES_USER=postgres
@@ -15,6 +15,7 @@ services:
       - '5432:5432'
     networks:
       - app-network
+
   minio:
     image: minio/minio:latest
     container_name: minio

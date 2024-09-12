@@ -42,6 +42,8 @@ impl AssetService for AssetServiceImpl {
             .put_json(&asset_pubkey, metadata_json)
             .await?;
 
+        let utc_now = Utc::now().naive_local();
+
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
@@ -49,7 +51,8 @@ impl AssetService for AssetServiceImpl {
             creator,
             collection,
             authority,
-            create_timestamp: Utc::now().naive_local(),
+            create_timestamp: utc_now,
+            update_timestamp: utc_now,
             pib44_account_num: account,
             pib44_address_num: address,
         };
@@ -135,6 +138,28 @@ impl AssetService for AssetServiceImpl {
         let l2_assets = self
             .l2_storage
             .find_by_owner(&owner_pubkey, sorting, limit, before, after)
+            .await?;
+        let l2_asset_pubkeys = l2_assets.iter().map(|asset| asset.pubkey).collect::<Vec<PublicKey>>();
+        let l2_assets_metadata = self.asset_metadata_storage.get_json_batch(&l2_asset_pubkeys).await?;
+
+        Ok(l2_assets
+            .into_iter()
+            .zip(l2_assets_metadata)
+            .map(|(asset, metadata)| L2AssetInfo { asset, metadata })
+            .collect())
+    }
+
+    async fn fetch_assets_by_creator(
+        &self,
+        creator_pubkey: PublicKey,
+        sorting: &AssetSorting,
+        limit: u32,
+        before: Option<&str>,
+        after: Option<&str>,
+    ) -> anyhow::Result<Vec<L2AssetInfo>> {
+        let l2_assets = self
+            .l2_storage
+            .find_by_creator(&creator_pubkey, sorting, limit, before, after)
             .await?;
         let l2_asset_pubkeys = l2_assets.iter().map(|asset| asset.pubkey).collect::<Vec<PublicKey>>();
         let l2_assets_metadata = self.asset_metadata_storage.get_json_batch(&l2_asset_pubkeys).await?;

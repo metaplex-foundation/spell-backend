@@ -1,207 +1,26 @@
-mod utils;
-
 use crate::utils::{
-    create_asset, create_assets_with_same_owner_requests, create_assets_with_same_owner_requests_with_random_values,
-    create_different_assets_requests, CreateAssetRequest,
+    create_assets_with_same_owner_requests, create_assets_with_same_owner_requests_with_random_values,
+    extract_asset_name_from_das_asset, fill_database_with_test_data, get_first_asset_name,
 };
-use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_config::AppConfig;
 use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::endpoints::errors::DasApiError;
-use json_rpc::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_owner};
-use json_rpc::endpoints::rpc_asset_models::Asset;
-use json_rpc::endpoints::types::{
-    AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAsset, GetAssetBatch, GetAssetsByOwner,
-};
+use json_rpc::endpoints::get_nft::get_asset_by_owner;
+use json_rpc::endpoints::types::{AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAssetsByOwner};
 use json_rpc::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
-use serde_json::{json, Value};
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
 
-async fn fill_database_with_test_data(
-    app_ctx: ArcedAppCtx,
-    asset_creation_strategy: fn() -> Vec<CreateAssetRequest>,
-) -> Vec<L2AssetInfo> {
-    let requests_for_asset_creation = asset_creation_strategy();
-    let mut filled_data_from_db = Vec::with_capacity(requests_for_asset_creation.len());
+mod utils;
 
-    for asset_req in requests_for_asset_creation {
-        let created_assets = create_asset(asset_req, app_ctx.clone())
+async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> AssetList {
+    serde_json::from_value::<AssetList>(
+        get_asset_by_owner(req_params, ctx.clone())
             .await
-            .unwrap_or_else(|e| panic!("Cannot create asset: {e}!"));
-        let created_asset =
-            serde_json::from_value(created_assets).unwrap_or_else(|e| panic!("Cannot serialize L2AssetInfo: {e}!"));
-
-        filled_data_from_db.push(created_asset)
-    }
-
-    filled_data_from_db
-}
-
-fn form_asset_json_uri(pubkey: &str) -> String {
-    format!("127.0.0.1:8080/asset/{pubkey}/metadata.json")
-}
-
-fn extract_asset_name_from_das_asset(asset: Asset) -> String {
-    serde_json::from_value(
-        asset
-            .content
-            .expect("Content should be present")
-            .metadata
-            .get_item("name")
-            .expect("Content should be present")
-            .clone(),
+            .expect("Failed to get assets."),
     )
-    .expect("Cannot call 'from_value'!")
-}
-
-#[tokio::test]
-async fn get_single_asset_positive() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
-        .await
-        .arced();
-
-    let assets_data_in_db = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests).await;
-
-    for asset in assets_data_in_db {
-        let expected_asset_pubkey = asset.asset.pubkey.to_string();
-        let expected_asset_json_uri = form_asset_json_uri(&expected_asset_pubkey);
-
-        let get_asset_req = GetAsset { id: expected_asset_pubkey.clone() };
-
-        let res = {
-            let res = get_asset(get_asset_req, app_ctx.clone())
-                .await
-                .expect("Failed to get asset.");
-            serde_json::from_value::<Asset>(res).expect("Failed serialize DAO asset..")
-        };
-
-        let actual_asset_pubkey = res.id;
-        let actual_asset_json_uri = res.content.expect("No content field.").json_uri;
-
-        assert_eq!(expected_asset_pubkey, actual_asset_pubkey);
-        assert_eq!(expected_asset_json_uri, actual_asset_json_uri)
-    }
-}
-
-#[tokio::test]
-async fn get_single_asset_negative() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
-        .await
-        .arced();
-
-    let non_existing_pubkey = Pubkey::new_unique().to_string();
-
-    let get_asset_req = GetAsset { id: non_existing_pubkey };
-
-    let res = get_asset(get_asset_req, app_ctx.clone()).await;
-    assert!(res.is_err());
-    assert_eq!(res.unwrap_err(), DasApiError::NoDataFoundError.into());
-}
-
-#[tokio::test]
-async fn get_asset_batch_negative() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
-        .await
-        .arced();
-
-    let non_existing_pubkeys = vec![
-        Pubkey::new_unique().to_string(),
-        Pubkey::new_unique().to_string(),
-        Pubkey::new_unique().to_string(),
-    ];
-
-    let get_assets_batch_req = GetAssetBatch { ids: non_existing_pubkeys };
-
-    let expected_res = vec![Value::Null, Value::Null, Value::Null];
-
-    let res = get_asset_batch(get_assets_batch_req, app_ctx.clone())
-        .await
-        .expect("Failed to get assets.");
-
-    let actual_res = serde_json::from_value::<Vec<Value>>(res).expect("Failed to serialize values");
-
-    assert_eq!(expected_res, actual_res);
-}
-
-#[tokio::test]
-async fn get_asset_batch_positive() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
-        .await
-        .arced();
-
-    let assets_pubkeys_data_in_db = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests)
-        .await
-        .into_iter()
-        .map(|asset| asset.asset.pubkey.to_string())
-        .collect::<Vec<String>>();
-
-    let get_asset_req = GetAssetBatch { ids: assets_pubkeys_data_in_db.clone() };
-
-    let res = {
-        let res = get_asset_batch(get_asset_req, app_ctx.clone())
-            .await
-            .expect("Failed to get assets.");
-        serde_json::from_value::<Vec<Asset>>(res).expect("Failed serialize DAO asset..")
-    };
-
-    for (expected_pubkey, actual_dao_asset) in assets_pubkeys_data_in_db.into_iter().zip(res) {
-        let actual_pubkey = actual_dao_asset.id;
-        assert_eq!(expected_pubkey, actual_pubkey);
-
-        let expected_asset_json_uri = form_asset_json_uri(&expected_pubkey);
-        let actual_asset_json_uri = form_asset_json_uri(&actual_pubkey);
-        assert_eq!(expected_asset_json_uri, actual_asset_json_uri);
-    }
-}
-
-#[tokio::test]
-async fn get_asset_batch_positive_with_non_existing_key() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
-        .await
-        .arced();
-
-    let mut pubkeys_for_request = fill_database_with_test_data(app_ctx.clone(), create_different_assets_requests)
-        .await
-        .into_iter()
-        .map(|asset| asset.asset.pubkey.to_string())
-        .collect::<Vec<String>>();
-
-    let non_existing_pubkey = Pubkey::new_unique().to_string();
-    pubkeys_for_request.push(non_existing_pubkey);
-
-    let get_asset_req = GetAssetBatch { ids: pubkeys_for_request.clone() };
-
-    let res = get_asset_batch(get_asset_req, app_ctx.clone())
-        .await
-        .expect("Failed to get assets.");
-    let mut res_as_values = serde_json::from_value::<Vec<Value>>(res).expect("Failed serialize DAO asset..");
-
-    // Last value should be null.
-    assert_eq!(res_as_values.pop(), Some(Value::Null));
-
-    let res_as_assets = res_as_values
-        .into_iter()
-        .map(serde_json::from_value)
-        .collect::<Result<Vec<Asset>, _>>()
-        .expect("Cannot parse DAO assets.");
-
-    // Remove last values.
-    pubkeys_for_request.pop();
-    for (expected_pubkey, actual_dao_asset) in pubkeys_for_request.into_iter().zip(res_as_assets) {
-        let actual_pubkey = actual_dao_asset.id;
-        assert_eq!(expected_pubkey, actual_pubkey);
-
-        let expected_asset_json_uri = form_asset_json_uri(&expected_pubkey);
-        let actual_asset_json_uri = form_asset_json_uri(&actual_pubkey);
-        assert_eq!(expected_asset_json_uri, actual_asset_json_uri);
-    }
+    .expect("Failed serialize DAO assets..")
 }
 
 #[tokio::test]
@@ -294,7 +113,7 @@ async fn get_assets_by_owner_sorting_by_created_date_asc() {
 }
 
 #[tokio::test]
-async fn get_assets_by_owner_with_limit_and_sorting_by_creation_data_desc() {
+async fn get_assets_by_owner_with_limit_and_sorting_by_creation_date_desc() {
     let t_env = TestEnvironmentCfg::with_all().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
@@ -517,10 +336,6 @@ async fn check_pagination(app_ctx: ArcedAppCtx, asset_owner: String) {
     };
     let first_10 = get_asset_list_by_owner(payload, app_ctx.clone()).await;
 
-    println!("second_10 start here ");
-    println!("{}", json!(&first_10));
-    println!("second_10 end here ");
-
     let payload = GetAssetsByOwner {
         limit: Some(10),
         page: None,
@@ -616,30 +431,4 @@ async fn check_pagination(app_ctx: ArcedAppCtx, asset_owner: String) {
     combined_10_30.extend(after_first_20.items.clone());
 
     assert_eq!(combined_10_30, first_30.items[10..]);
-}
-
-async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> AssetList {
-    serde_json::from_value::<AssetList>(
-        get_asset_by_owner(req_params, ctx.clone())
-            .await
-            .expect("Failed to get assets."),
-    )
-    .expect("Failed serialize DAO assets..")
-}
-
-fn get_first_asset_name(asset_list: &AssetList) -> String {
-    serde_json::from_value(
-        asset_list
-            .items
-            .first()
-            .cloned()
-            .unwrap()
-            .content
-            .unwrap()
-            .metadata
-            .get_item("name")
-            .unwrap()
-            .clone(),
-    )
-    .unwrap()
 }

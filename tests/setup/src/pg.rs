@@ -26,13 +26,13 @@ impl PgContainer {
     }
 }
 
-/// Returns path to "sqlx-migrations" folder
+/// Returns path to "migrations" folder
 fn ddl_path() -> String {
     std::env::current_dir()
         .unwrap() // integration tests dir
         .parent()
         .unwrap() // workspace dir
-        .join("sqlx-migrations")
+        .join("migrations")
         .to_str()
         .unwrap()
         .to_string()

@@ -16,19 +16,37 @@ docker compose up db -d
 ```
 
 ### 2. Configure the Database with SQLx
+If you ***don't familiar with SQLx***, read docs:
+1. https://github.com/launchbadge/sqlx/blob/main/README.md
+2. https://github.com/launchbadge/sqlx/blob/main/sqlx-cli/README.md
+
+
 Set up the database with the following commands:
 ```shell
-sqlx database setup --database-url postgres://postgres:postgres@localhost:5432/spell-wallet --source sqlx-migrations
+sqlx database setup --database-url postgres://postgres:postgres@localhost:5432/spell-wallet
 ```
 It will create the database specified and ***runs any pending migrations***, so it's unnecessary to run migrations manually. 
 
 
-### Make sure!
-If you want to run (or rollback) migrations you should specify `--source` option to `sqlx-migrations` folder.
-For example: 
+### Running SQLx migrations
+When running or rolling back migrations, make sure to specify the `--database-url` option if you don't have a `.env` file configured.
+For example:
 ```shell
-sqlx migrate run --source sqlx-migrations
+sqlx migrate run --database-url postgres://postgres:postgres@localhost:5432/spell-wallet
 ```
+### Simplifying with Environment Variables
+
+To avoid specifying the `--database-url` option each time, you can create a `.env` file with the `DATABASE_URL` environment variable:
+
+```shell
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/spell-wallet
+```
+ 
+
+## `manual-migrations` folder
+
+The `manual-migrations` folder contains SQL files used specifically for deployment. If you modify any migrations in the `migrations` folder,
+make sure to replicate those changes in the `manual-migrations` folder to keep both environments in sync.
 
 ### 3. Setup buckets in MinIo:
 
@@ -93,3 +111,8 @@ cargo test -- --test-threads 1
 ```
 This may take more time to complete, but it will reduce CPU and memory usage by preventing parallel test execution.
 
+# Formating
+Use this command for formating code:
+```shell
+cargo +nightly fmt 
+```

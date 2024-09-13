@@ -43,8 +43,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/spell-wallet
 ```
  
 
-## `manual-migrations` folder
-
+### `manual-migrations` folder
 The `manual-migrations` folder contains SQL files used specifically for deployment. If you modify any migrations in the `migrations` folder,
 make sure to replicate those changes in the `manual-migrations` folder to keep both environments in sync.
 

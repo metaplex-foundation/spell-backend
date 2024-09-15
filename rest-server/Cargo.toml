@@ -11,8 +11,10 @@ interfaces = { path = "../interfaces"}
 util = { path = "../util" }
 service = { path = "../service" }
 storage = { path = "../storage" }
+solana-integration = { path = "../solana-integration" }
 
 actix-web = { workspace = true }
+actix-http = { workspace = true }
 
 tracing-subscriber = { workspace = true }
 tracing-actix-web = { workspace = true }
@@ -27,5 +29,17 @@ sqlx = { workspace = true }
 uuid = { workspace = true }
 bs58 = { workspace = true }
 
+solana-sdk = { workspace = true }
+
 [dev-dependencies]
 setup = { path = "../tests/setup" }
+solana-sdk = { workspace = true }
+solana-client = { workspace = true }
+mpl-core = { workspace = true }
+serial_test = { workspace = true }
+
+[build-dependencies]
+which = "6"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(skip_solana_tests)'] }

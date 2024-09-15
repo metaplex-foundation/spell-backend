@@ -1,0 +1,20 @@
+[package]
+name = "solana-integration"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+entities = { path = "../entities" }
+interfaces = { path = "../interfaces"}
+util = { path = "../util"}
+
+tracing = { workspace = true  }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+
+bs58 = { workspace = true }
+
+solana-sdk = { workspace = true }
+solana-client = { workspace = true }
+
+mpl-core = { workspace = true }

@@ -6,8 +6,10 @@ edition = "2021"
 [dependencies]
 entities = { path = "../entities"}
 interfaces = { path = "../interfaces"}
+solana-integration = { path = "../solana-integration" }
 util = { path = "../util"}
 
+tracing = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
@@ -16,3 +18,8 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 
 solana-sdk = { workspace = true }
+
+[dev-dependencies]
+setup = { path = "../tests/setup" }
+
+tokio = { workspace = true }

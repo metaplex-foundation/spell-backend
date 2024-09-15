@@ -1,3 +1,11 @@
+-- State of asset.
+-- Initially assets are created as L2, but later can be minted on L1 blockchain
+CREATE TYPE asset_state AS ENUM (
+	'L2',
+	'MINTING',
+	'L1_SOLANA'
+);
+
 -- Table that stores information about L2 nft assets
 CREATE TABLE IF NOT EXISTS l2_assets_v1 (
 	asset_pubkey BYTEA NOT NULL,
@@ -6,6 +14,7 @@ CREATE TABLE IF NOT EXISTS l2_assets_v1 (
     asset_creator BYTEA NOT NULL,
     asset_collection BYTEA DEFAULT NULL,
     asset_authority BYTEA NOT NULL,
+    current_state asset_state NOT NULL DEFAULT 'L2',
     asset_create_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     asset_last_update_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     pib44_account_num INT8 NOT NULL CHECK (pib44_account_num >= 0),

@@ -8,7 +8,7 @@ members = [
     "tests/setup",
     "util",
     "service",
-    "entities",
+    "entities", "solana-integration",
 ]
 
 [workspace.dependencies]
@@ -34,6 +34,7 @@ tracing-subscriber =  { version = "0.3.16", features = ["env-filter"] }
 
 # HTTP, RPC and Schemas
 actix-web = "4.9.0"
+actix-http = "3.9"
 jsonrpc-http-server = "18.0.0"
 jsonrpc-core = "18.0.0"
 schemars = "0.8.6"
@@ -56,6 +57,7 @@ url = "2.5.2"
 mime_guess = "2.0.5"
 jsonpath_lib = "0.3.0"
 base64 = "0.22.1"
+cached = "0.53"
 
 
 # Config and env
@@ -69,13 +71,15 @@ aws-sdk-s3 = "^1.46"
 
 
 # Solana
-solana-sdk = "1.18.22"
-
+solana-sdk = "2"
+solana-client = "2"
+solana-rpc-client-api = "2"
+mpl-core = "=0.8.1-beta.1"
 
 # Testing
 testcontainers = "0.21"
 testcontainers-modules = "0.9"
-
+serial_test = "3"
 
 [patch.crates-io.curve25519-dalek]
 git = "https://github.com/solana-labs/curve25519-dalek.git"

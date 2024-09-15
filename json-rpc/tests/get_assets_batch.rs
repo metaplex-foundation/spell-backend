@@ -13,7 +13,7 @@ mod utils;
 
 #[tokio::test]
 async fn get_asset_batch_negative() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
@@ -39,7 +39,7 @@ async fn get_asset_batch_negative() {
 
 #[tokio::test]
 async fn get_asset_batch_positive() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
@@ -71,7 +71,7 @@ async fn get_asset_batch_positive() {
 
 #[tokio::test]
 async fn get_asset_batch_positive_with_non_existing_key() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();

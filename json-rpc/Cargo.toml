@@ -30,6 +30,8 @@ util = { path = "../util" }
 service = { path = "../service" }
 storage = { path = "../storage" }
 interfaces = { path = "../interfaces" }
+solana-integration = { path = "../solana-integration" }
+
 solana-sdk = { workspace = true }
 
 [dev-dependencies]

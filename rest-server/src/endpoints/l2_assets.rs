@@ -7,9 +7,14 @@ use actix_web::{
     post, put, web, HttpResponse, Responder,
 };
 use entities::l2::PublicKey;
-use interfaces::asset_service::L2AssetInfo;
+use interfaces::{
+    asset_service::{L1MintError, L2AssetInfo},
+    l1_service::L1MintTransactionError,
+    l2_storage::L2StorageError,
+};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
+use solana_sdk::transaction::Transaction;
 use util::publickey::PublicKeyExt;
 
 use crate::{auth::api_key_extractor::ApiKeyExtractor, web::app::AppState};
@@ -98,7 +103,7 @@ pub async fn create_asset(
                 .content_type(ContentType::json())
                 .body(json!(dto).to_string())
         }
-        Err(e) => internal_server_error(Some(e.to_string())),
+        Err(e) => internal_server_error(Some(&e.to_string())),
     }
 }
 
@@ -157,7 +162,7 @@ pub async fn update_asset(
             }
             None => bad_request(ASSET_NOT_FOUND),
         },
-        Err(e) => internal_server_error(Some(e.to_string())),
+        Err(e) => internal_server_error(Some(&e.to_string())),
     }
 }
 
@@ -177,7 +182,7 @@ pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<Arc<App
             }
             None => bad_request(ASSET_NOT_FOUND),
         },
-        Err(e) => internal_server_error(Some(e.to_string())),
+        Err(e) => internal_server_error(Some(&e.to_string())),
     }
 }
 
@@ -192,7 +197,28 @@ pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<Arc<
             Some(metadata) => HttpResponse::Ok().content_type(ContentType::json()).body(metadata),
             None => bad_request(ASSET_NOT_FOUND),
         },
-        Err(e) => internal_server_error(Some(e.to_string())),
+        Err(e) => internal_server_error(Some(&e.to_string())),
+    }
+}
+
+/// This endpoint accepts mint CreateV1 mpl-core transaction, that is fully populated
+/// and partially signed on the client side.
+/// The transaction is verified, signed on by the asset keypair and sent to Solana.
+#[post("/asset/mint")]
+pub async fn mint_transaction(req: web::Json<Transaction>, state: web::Data<Arc<AppState>>) -> impl Responder {
+    match state.asset_service.execute_asset_l1_mint(req.0).await {
+        Ok(()) => HttpResponse::new(StatusCode::OK),
+        Err(e) => {
+            if let Some(e) = e.downcast_ref::<L1MintError>() {
+                bad_request(&e.to_string())
+            } else if let Some(e) = e.downcast_ref::<L2StorageError>() {
+                bad_request(&e.to_string())
+            } else if let Some(e) = e.downcast_ref::<L1MintTransactionError>() {
+                bad_request(&e.to_string())
+            } else {
+                internal_server_error(Some(&e.to_string()))
+            }
+        }
     }
 }
 
@@ -207,11 +233,11 @@ fn bad_request(msg: &str) -> HttpResponse {
         .body(payload.to_string())
 }
 
-fn internal_server_error(msg: Option<impl Into<String>>) -> HttpResponse {
+fn internal_server_error(msg: Option<&str>) -> HttpResponse {
     let mut response = HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     if let Some(m) = msg {
         let payload = json!({
-            "error": m.into(),
+            "error": m,
         });
         response = response.set_body(BoxBody::new(payload.to_string()));
     }

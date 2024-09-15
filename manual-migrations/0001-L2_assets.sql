@@ -6,6 +6,7 @@ CREATE TABLE l2_assets_v1 (
     asset_creator BYTEA NOT NULL,
     asset_collection BYTEA DEFAULT NULL,
     asset_authority BYTEA NOT NULL,
+    current_state asset_state NOT NULL DEFAULT 'L2',
     asset_create_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     asset_last_update_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     pib44_account_num INT8 NOT NULL CHECK (pib44_account_num >= 0),

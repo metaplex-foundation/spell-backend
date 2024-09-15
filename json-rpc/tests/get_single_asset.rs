@@ -13,7 +13,7 @@ mod utils;
 
 #[tokio::test]
 async fn get_single_asset_positive() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
@@ -43,7 +43,7 @@ async fn get_single_asset_positive() {
 
 #[tokio::test]
 async fn get_single_asset_negative() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
@@ -59,7 +59,7 @@ async fn get_single_asset_negative() {
 
 #[tokio::test]
 async fn get_single_asset_using_invalid_pubkey() {
-    let t_env = TestEnvironmentCfg::with_all().start().await;
+    let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
     let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();

@@ -3,8 +3,8 @@ use actix_web::{web, App, HttpServer};
 use interfaces::asset_service::AssetService;
 use io::Result;
 use service::{asset_service_impl::AssetServiceImpl, converter::AssetDtoConverter};
-use std::io;
-use std::sync::Arc;
+use solana_integration::l1_service_solana::SolanaService;
+use std::{io, sync::Arc};
 use storage::asset_storage_s3::S3Storage;
 use storage::l2_storage_pg::L2StoragePg;
 use tracing::info;
@@ -64,6 +64,8 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
         Arc::new(storage)
     };
 
+    let solana_service = Arc::new(SolanaService::new(&cfg.solana.url));
+
     let hd_wallet_producer = HdWalletProducer::from_seed(cfg.master_key_seed());
 
     let asset_service = Arc::new(AssetServiceImpl {
@@ -72,6 +74,7 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
         l2_storage,
         asset_metadata_storage: obj_storage.clone(),
         blob_storage: obj_storage.clone(),
+        s1_service: solana_service,
     });
 
     let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url };

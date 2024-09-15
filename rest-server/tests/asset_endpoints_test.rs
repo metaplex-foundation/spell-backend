@@ -1,46 +1,20 @@
+mod test_app_util;
+
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::{collections::HashMap, net::Ipv4Addr};
+    use actix_web::{body::MessageBody, http::StatusCode, test};
+    use entities::l2::PublicKey;
+    use rest_server::endpoints::l2_assets::{CreateAssetRequest, UpdateAssetRequest};
+    use setup::TestEnvironmentCfg;
+    use util::publickey::PublicKeyExt;
 
-    use actix_web::{body::MessageBody, dev::ServiceResponse, http::StatusCode, test, web, App};
-    use entities::api_key::ApiKeys;
-    use entities::{
-        api_key::{ApiKey, Username},
-        l2::PublicKey,
-        rpc_asset_models::Asset,
-    };
-    use rest_server::{
-        config::app_context::ApiKeysProviderCtx,
-        endpoints::l2_assets::{
-            create_asset, get_asset, get_metadata, update_asset, CreateAssetRequest, UpdateAssetRequest,
-        },
-        web::app::create_app_state,
-    };
-    use setup::{TestEnvironment, TestEnvironmentCfg};
-    use util::config::{EnvProfile, JsonRpc, Settings};
-    use util::{config::RestServerCfg, publickey::PublicKeyExt};
+    use crate::test_app_util::{self, extract_asset_from_response};
 
     #[actix_web::test]
     async fn test_l2_asset_endpoints() {
         // Prepare test env
-        let t_env = TestEnvironmentCfg::with_all().start().await;
-        let cfg = make_test_cfg(&t_env).await;
-        let state = Arc::new(create_app_state(cfg).await);
-
-        let api_keys_provider_ctx =
-            ApiKeysProviderCtx::from_memory(ApiKeys::from(HashMap::from([(ApiKey::new("111"), Username::new(""))])));
-
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(api_keys_provider_ctx))
-                .app_data(web::Data::new(state))
-                .service(create_asset)
-                .service(update_asset)
-                .service(get_asset)
-                .service(get_metadata),
-        )
-        .await;
+        let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
+        let app = test_app_util::init_web_app(&t_env).await;
 
         // given
         let metadata_json = "{}".to_string();
@@ -67,7 +41,7 @@ mod tests {
 
             let serv_resp = test::call_service(&app, req).await;
             assert_eq!(serv_resp.status(), StatusCode::CREATED);
-            extract_response(serv_resp)
+            extract_asset_from_response(serv_resp)
         };
 
         assert_eq!(
@@ -95,7 +69,7 @@ mod tests {
 
             let serv_resp = test::call_service(&app, req).await;
             assert_eq!(serv_resp.status(), StatusCode::OK);
-            extract_response(serv_resp)
+            extract_asset_from_response(serv_resp)
         };
 
         assert_eq!(created_asset, fetched_asset_1);
@@ -142,7 +116,7 @@ mod tests {
 
             let serv_resp = test::call_service(&app, req).await;
             assert_eq!(serv_resp.status(), StatusCode::OK);
-            extract_response(serv_resp)
+            extract_asset_from_response(serv_resp)
         };
 
         assert_eq!(
@@ -202,7 +176,7 @@ mod tests {
 
             let serv_resp = test::call_service(&app, req).await;
             assert_eq!(serv_resp.status(), StatusCode::OK);
-            extract_response(serv_resp)
+            extract_asset_from_response(serv_resp)
         };
 
         assert_eq!(updated_asset, fetched_asset_2);
@@ -219,25 +193,5 @@ mod tests {
         };
 
         assert_eq!(fetched_metadata, new_metadata_json);
-    }
-
-    async fn make_test_cfg(t_env: &TestEnvironment) -> Settings {
-        Settings {
-            rest_server: RestServerCfg {
-                port: 8080,
-                host: Ipv4Addr::LOCALHOST,
-                log_level: "DEBUG".to_string(),
-                base_url: "http://localhost".to_string(),
-            },
-            database: t_env.database_cfg().await,
-            obj_storage: t_env.obj_storage_cfg().await,
-            env: EnvProfile::Local,
-            json_rpc_server: JsonRpc { port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
-        }
-    }
-
-    fn extract_response(serv_resp: ServiceResponse) -> Asset {
-        let resp_text = String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap();
-        serde_json::from_str(&resp_text).unwrap()
     }
 }

@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS l2_assets_v1 (
     current_state asset_state NOT NULL DEFAULT 'L2',
     asset_create_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     asset_last_update_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-    pib44_account_num INT8 NOT NULL CHECK (pib44_account_num >= 0),
-    pib44_address_num INT8 NOT NULL CHECK (pib44_address_num >= 0),
+    bip44_account_num INT8 NOT NULL CHECK (bip44_account_num >= 0),
+    bip44_address_num INT8 NOT NULL CHECK (bip44_address_num >= 0),
     CONSTRAINT pk_asset_pubkey PRIMARY KEY (asset_pubkey)
 );
 

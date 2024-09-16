@@ -4,13 +4,23 @@ use thiserror::Error;
 
 use solana_sdk::transaction::Transaction;
 
+pub struct ParsedMintIxInfo {
+    pub asset_pubkey: PublicKey,
+    pub authority: PublicKey,
+    pub owner: PublicKey,
+    pub payer: PublicKey,
+    pub collection: Option<PublicKey>,
+    pub name: String,
+    pub uri: String,
+}
+
 #[async_trait::async_trait]
 pub trait L1Service {
     /// Takes Transaction that contains single mpl-core CreateV1Builder instruction
     /// and extracts NTF asset pubkey from it.
     /// ## Args:
     /// * `tx` - transaction created on the client side
-    fn extract_mint_asset_pubkey(&self, tx: &Transaction) -> anyhow::Result<PublicKey>;
+    fn extract_mint_asset_pubkey(&self, tx: &Transaction) -> anyhow::Result<ParsedMintIxInfo>;
 
     /// Accepts a transaction that contains single mpl-core CreateV1Builder instruction
     /// created on the client side and partially signed by the client,
@@ -36,4 +46,6 @@ pub enum L1MintTransactionError {
     MalformedTransaction,
     #[error("Malformed mpl-code create v1 instuction")]
     MalformedMintAssetInstruction,
+    #[error("Wrong mpl-core program id")]
+    WrongMplCoreProgrmaId,
 }

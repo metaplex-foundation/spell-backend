@@ -27,8 +27,8 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
-                    pib44_account_num,
-                    pib44_address_num
+                    bip44_account_num,
+                    bip44_address_num
                 )
             "#,
         );
@@ -42,8 +42,8 @@ impl L2Storage for L2StoragePg {
                 .push_bind(asset.authority)
                 .push_bind(asset.create_timestamp)
                 .push_bind(asset.update_timestamp)
-                .push_bind(asset.pib44_account_num as i64)
-                .push_bind(asset.pib44_address_num as i64);
+                .push_bind(asset.bip44_account_num as i64)
+                .push_bind(asset.bip44_address_num as i64);
         });
         query_builder.push(
             r#"
@@ -75,8 +75,8 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
-                    pib44_account_num,
-                    pib44_address_num
+                    bip44_account_num,
+                    bip44_address_num
                 FROM l2_assets_v1
                 WHERE current_state = 'L2' AND asset_pubkey = 
             "#,
@@ -104,8 +104,8 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
-                    pib44_account_num,
-                    pib44_address_num
+                    bip44_account_num,
+                    bip44_address_num
                 FROM l2_assets_v1
                 WHERE asset_pubkey IN(
             "#,
@@ -236,8 +236,8 @@ impl L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
-                    pib44_account_num,
-                    pib44_address_num
+                    bip44_account_num,
+                    bip44_address_num
                 FROM l2_assets_v1
                 WHERE
             "#,
@@ -366,8 +366,8 @@ fn from_row(row: PgRow) -> anyhow::Result<L2Asset> {
         authority: row.try_get("asset_authority").context("FromRowErr")?,
         create_timestamp: row.try_get("asset_create_timestamp").context("FromRowErr")?,
         update_timestamp: row.try_get("asset_last_update_timestamp").context("FromRowErr")?,
-        pib44_account_num: row.try_get::<i64, _>("pib44_account_num").context("FromRowErr")? as u32,
-        pib44_address_num: row.try_get::<i64, _>("pib44_address_num").context("FromRowErr")? as u32,
+        bip44_account_num: row.try_get::<i64, _>("bip44_account_num").context("FromRowErr")? as u32,
+        bip44_address_num: row.try_get::<i64, _>("bip44_address_num").context("FromRowErr")? as u32,
     })
 }
 

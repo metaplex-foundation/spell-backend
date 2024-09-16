@@ -5,12 +5,14 @@ use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
     asset_service::{AssetService, L1MintError, L2AssetInfo},
     asset_storage::{AssetMetadataStorage, BlobStorage},
-    l1_service::L1Service,
+    l1_service::{L1Service, ParsedMintIxInfo},
     l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage, L2StorageError},
 };
 use solana_sdk::{signer::Signer, transaction::Transaction};
 use tracing::info;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
+
+use crate::converter::get_metadata_uri_for_key;
 
 #[derive(Clone)]
 pub struct AssetServiceImpl {
@@ -20,6 +22,7 @@ pub struct AssetServiceImpl {
     pub asset_metadata_storage: Arc<dyn AssetMetadataStorage + Sync + Send>,
     pub blob_storage: Arc<dyn BlobStorage + Sync + Send>,
     pub s1_service: Arc<dyn L1Service + Sync + Send>,
+    pub metadata_server_base_url: String,
 }
 
 #[async_trait::async_trait]
@@ -54,8 +57,8 @@ impl AssetService for AssetServiceImpl {
             authority,
             create_timestamp: utc_now,
             update_timestamp: utc_now,
-            pib44_account_num: account,
-            pib44_address_num: address,
+            bip44_account_num: account,
+            bip44_address_num: address,
         };
 
         self.l2_storage.save(&asset).await?;
@@ -173,11 +176,14 @@ impl AssetService for AssetServiceImpl {
     }
 
     async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()> {
-        let asset_pubkey = self.s1_service.extract_mint_asset_pubkey(&tx)?;
+        let mint_ix = self.s1_service.extract_mint_asset_pubkey(&tx)?;
+        let asset_pubkey = mint_ix.asset_pubkey;
 
         let Some(l2_asset) = self.l2_storage.find(&asset_pubkey).await? else {
             anyhow::bail!(L2StorageError::L2AssetNotFound(asset_pubkey));
         };
+
+        self.validate_mint_transaction_data(&mint_ix, &l2_asset)?;
 
         if !self.l2_storage.lock_asset_before_minting(&asset_pubkey).await? {
             anyhow::bail!(L1MintError::NotUnlockedL2Asset)
@@ -185,7 +191,7 @@ impl AssetService for AssetServiceImpl {
 
         let asset_kp = self
             .wallet_producer
-            .make_hd_wallet(l2_asset.pib44_account_num, l2_asset.pib44_address_num);
+            .make_hd_wallet(l2_asset.bip44_account_num, l2_asset.bip44_address_num);
 
         let tx_signature = match self.s1_service.execute_mint_transaction(tx, &asset_kp).await {
             Ok(signature) => signature,
@@ -203,4 +209,25 @@ impl AssetService for AssetServiceImpl {
     }
 }
 
-impl AssetServiceImpl {}
+impl AssetServiceImpl {
+    fn validate_mint_transaction_data(&self, mint_ix: &ParsedMintIxInfo, l2_asset: &L2Asset) -> anyhow::Result<()> {
+        let expected_metadata_url = get_metadata_uri_for_key(&self.metadata_server_base_url, l2_asset.pubkey);
+
+        if mint_ix.uri != expected_metadata_url {
+            anyhow::bail!(L1MintError::WrongMetadataUri)
+        }
+        if mint_ix.name != l2_asset.name {
+            anyhow::bail!(L1MintError::WrongName)
+        }
+        if mint_ix.authority != l2_asset.authority {
+            anyhow::bail!(L1MintError::WrongAuthority)
+        }
+        if mint_ix.owner != l2_asset.owner {
+            anyhow::bail!(L1MintError::WrongOwner)
+        }
+        if mint_ix.collection != l2_asset.collection {
+            anyhow::bail!(L1MintError::WrongOwner)
+        }
+        Ok(())
+    }
+}

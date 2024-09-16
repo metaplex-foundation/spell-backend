@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use entities::l2::PublicKey;
-use interfaces::l1_service::{L1MintTransactionError, L1Service};
+use interfaces::l1_service::{L1MintTransactionError, L1Service, ParsedMintIxInfo};
 
+use mpl_core::instructions::CreateV1InstructionArgs;
 use solana_client::nonblocking::rpc_client::{self, RpcClient};
 use solana_sdk::signature::Signature;
 use solana_sdk::signer::keypair::Keypair;
@@ -20,7 +20,7 @@ impl SolanaService {
 
 #[async_trait::async_trait]
 impl L1Service for SolanaService {
-    fn extract_mint_asset_pubkey(&self, tx: &Transaction) -> anyhow::Result<PublicKey> {
+    fn extract_mint_asset_pubkey(&self, tx: &Transaction) -> anyhow::Result<ParsedMintIxInfo> {
         let instructions = &tx.message().instructions;
         if instructions.is_empty() {
             anyhow::bail!(L1MintTransactionError::NoInstruction);
@@ -28,8 +28,8 @@ impl L1Service for SolanaService {
         if instructions.len() > 1 {
             anyhow::bail!(L1MintTransactionError::UnexpectedInstructions);
         }
-        // TODO: check it's mpl-core program
 
+        let mint_ix = &instructions[0];
         // Order of pubkeys in CreateV1 instruction:
         // 0) asset
         // 1) collection | MPL_CORE_ID
@@ -39,6 +39,7 @@ impl L1Service for SolanaService {
         // 5) update_authority | MPL_CORE_ID
         // 6) system_program
         // 7) log_wrapper | MPL_CORE_ID
+
         let ix_accounts = &instructions[0].accounts;
 
         if ix_accounts.len() < 8 {
@@ -54,11 +55,33 @@ impl L1Service for SolanaService {
             anyhow::bail!(L1MintTransactionError::MalformedTransaction);
         }
 
-        // TODO: What kind of validations we need?
+        if tx_accounts[mint_ix.program_id_index as usize] != mpl_core::ID {
+            anyhow::bail!(L1MintTransactionError::WrongMplCoreProgrmaId);
+        }
 
         let asset_pubkey = tx_accounts[ix_accounts[0] as usize];
+        let collection = Some(tx_accounts[ix_accounts[1] as usize]).filter(|pk| *pk != mpl_core::ID);
+        let authority = tx_accounts[ix_accounts[2] as usize];
+        let payer = tx_accounts[ix_accounts[3] as usize];
+        let owner = tx_accounts[ix_accounts[4] as usize];
 
-        Ok(asset_pubkey.to_bytes())
+        let (name, uri) = {
+            use borsh::de::BorshDeserialize;
+            let Ok(mint_args) = CreateV1InstructionArgs::try_from_slice(&mint_ix.data[1..]) else {
+                anyhow::bail!(L1MintTransactionError::MalformedMintAssetInstruction);
+            };
+            (mint_args.name, mint_args.uri)
+        };
+
+        Ok(ParsedMintIxInfo {
+            asset_pubkey: asset_pubkey.to_bytes(),
+            authority: authority.to_bytes(),
+            owner: owner.to_bytes(),
+            payer: payer.to_bytes(),
+            collection: collection.map(|pk| pk.to_bytes()),
+            name,
+            uri,
+        }) // asset_pubkey.to_bytes()
     }
 
     async fn execute_mint_transaction(
@@ -68,7 +91,7 @@ impl L1Service for SolanaService {
     ) -> anyhow::Result<Signature> {
         tx.sign(&[asset_keypair], tx.message.recent_blockhash);
 
-        let tx_singnature = self.client.send_and_confirm_transaction(&tx).await.unwrap();
+        let tx_singnature = self.client.send_and_confirm_transaction(&tx).await?;
 
         Ok(tx_singnature)
     }

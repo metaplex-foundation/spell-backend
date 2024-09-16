@@ -70,6 +70,7 @@ impl AppCtx {
                 asset_metadata_storage: s3_storage.clone(),
                 blob_storage: s3_storage.clone(),
                 s1_service: solana_service,
+                metadata_server_base_url: app_config.settings.rest_server.base_url.clone(),
             }),
             metadata_uri_base,
         }

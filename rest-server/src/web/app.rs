@@ -75,6 +75,7 @@ pub async fn create_app_state(cfg: Settings) -> AppState {
         asset_metadata_storage: obj_storage.clone(),
         blob_storage: obj_storage.clone(),
         s1_service: solana_service,
+        metadata_server_base_url: cfg.rest_server.base_url.clone(),
     });
 
     let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url };

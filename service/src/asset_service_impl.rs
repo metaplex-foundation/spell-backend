@@ -176,7 +176,7 @@ impl AssetService for AssetServiceImpl {
     }
 
     async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()> {
-        let mint_ix = self.s1_service.extract_mint_asset_pubkey(&tx)?;
+        let mint_ix = self.s1_service.parse_mint_transaction(&tx)?;
         let asset_pubkey = mint_ix.asset_pubkey;
 
         let Some(l2_asset) = self.l2_storage.find(&asset_pubkey).await? else {
@@ -217,13 +217,21 @@ impl AssetServiceImpl {
             anyhow::bail!(L1MintError::WrongMetadataUri)
         }
         if mint_ix.name != l2_asset.name {
-            anyhow::bail!(L1MintError::WrongName)
+            anyhow::bail!(L1MintError::WrongName(l2_asset.name.clone(), mint_ix.name.clone()))
         }
-        if mint_ix.authority != l2_asset.authority {
-            anyhow::bail!(L1MintError::WrongAuthority)
+        if let Some(authority) = mint_ix.authority {
+            if authority != l2_asset.authority {
+                anyhow::bail!(L1MintError::WrongAuthority)
+            }
+        } else {
+            anyhow::bail!(L1MintError::MissingAuthority)
         }
-        if mint_ix.owner != l2_asset.owner {
-            anyhow::bail!(L1MintError::WrongOwner)
+        if let Some(owner) = mint_ix.owner {
+            if owner != l2_asset.owner {
+                anyhow::bail!(L1MintError::WrongOwner)
+            }
+        } else {
+            anyhow::bail!(L1MintError::MissingOwner)
         }
         if mint_ix.collection != l2_asset.collection {
             anyhow::bail!(L1MintError::WrongOwner)

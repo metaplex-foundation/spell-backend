@@ -1,23 +1,18 @@
 mod test_app_util;
 
-#[cfg(not(any(skip_solana_tests)))]
+//#[cfg(not(any(skip_solana_tests)))]
 #[allow(clippy::all)]
 mod test {
-    use std::{str::FromStr, time::Duration};
-
+    use crate::test_app_util;
     use actix_http::StatusCode;
-    use actix_web::test;
-    use entities::l2::PublicKey;
+    use actix_web::{body::MessageBody, test};
     use mpl_core::instructions::CreateV1Builder;
-    use publickey::PublicKeyExt;
     use rest_server::endpoints::l2_assets::CreateAssetRequest;
     use setup::TestEnvironmentCfg;
     use solana_client::nonblocking::rpc_client::RpcClient;
     use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
+    use std::{str::FromStr, time::Duration};
     use test_app_util::extract_asset_from_response;
-    use util::publickey;
-
-    use crate::test_app_util;
 
     #[tokio::test]
     #[serial_test::serial]
@@ -34,30 +29,11 @@ mod test {
         let app = test_app_util::init_web_app(&t_env).await;
 
         let solana_client = RpcClient::new_with_timeout(t_env.solana_url(), Duration::from_secs(1));
+        await_solana_to_startup(&solana_client).await;
 
-        // Waiting for server to start
-        await_for(10, Duration::from_secs(1), || solana_client.get_health())
-            .await
-            .unwrap();
-
-        let client_keypair = Keypair::new();
-        {
-            let master_keypair = solana_sdk::signature::keypair_from_seed(&test_cfg.master_key_seed()).unwrap();
-            let airdrop_sig_1 = solana_client
-                .request_airdrop(&master_keypair.pubkey(), 20000000 * 10000)
-                .await
-                .unwrap();
-            let airdrop_sig_2 = solana_client
-                .request_airdrop(&client_keypair.pubkey(), 20000000 * 10000)
-                .await
-                .unwrap();
-
-            while !(solana_client.confirm_transaction(&airdrop_sig_1).await.unwrap()
-                && solana_client.confirm_transaction(&airdrop_sig_2).await.unwrap())
-            {
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
+        let client_kp = Keypair::new();
+        let master_kp = solana_sdk::signature::keypair_from_seed(&test_cfg.master_key_seed()).unwrap();
+        airdop(&solana_client, &[client_kp.pubkey(), master_kp.pubkey()]).await;
 
         // preparing L2 asset
         let metadata_json = r#"
@@ -77,17 +53,17 @@ mod test {
                 }
             "#
         .to_string();
-        let owner = PublicKey::new_unique();
-        let creator = PublicKey::new_unique();
-        let authority = PublicKey::new_unique();
+
+        let creator_kp = Keypair::new();
+        let authority_kp = Keypair::new();
 
         let created_asset = {
             let req_payload = CreateAssetRequest {
                 name: "name1".to_string(),
                 metadata_json: metadata_json.clone(),
-                owner: bs58::encode(owner).into_string(),
-                creator: bs58::encode(creator).into_string(),
-                authority: bs58::encode(authority).into_string(),
+                owner: bs58::encode(client_kp.pubkey()).into_string(),
+                creator: bs58::encode(creator_kp.pubkey()).into_string(),
+                authority: bs58::encode(authority_kp.pubkey()).into_string(),
                 collection: None,
             };
 
@@ -103,29 +79,33 @@ mod test {
         };
 
         // Transaction created on client side
+        let asset_name = created_asset
+            .content
+            .as_ref()
+            .unwrap()
+            .metadata
+            .get_item("name")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+        let authority = Pubkey::from_str(&created_asset.authorities.as_ref().unwrap()[0].address).unwrap();
+
         let create_asset_ix = CreateV1Builder::new()
             .asset(Pubkey::from_str(&created_asset.id).unwrap())
-            .payer(client_keypair.pubkey())
-            .name(
-                created_asset
-                    .content
-                    .as_ref()
-                    .unwrap()
-                    .metadata
-                    .get_item("name")
-                    .unwrap()
-                    .to_string(),
-            )
-            // TODO: replace with util call
-            .uri(format!("https://l2-backend/asset/{}/metadata.json", &created_asset.id))
+            .payer(client_kp.pubkey())
+            .name(asset_name)
+            .uri(format!("{}/asset/{}/metadata.json", test_cfg.rest_server.base_url, &created_asset.id))
+            .authority(Some(authority))
+            .owner(Some(client_kp.pubkey()))
             .instruction();
 
-        let signers = vec![&client_keypair];
+        let signers = vec![&client_kp, &authority_kp];
 
         let last_blockhash = solana_client.get_latest_blockhash().await.unwrap();
 
         // Transaction is partially signed by client
-        let mut create_asset_tx = Transaction::new_with_payer(&[create_asset_ix], Some(&client_keypair.pubkey()));
+        let mut create_asset_tx = Transaction::new_with_payer(&[create_asset_ix], Some(&client_kp.pubkey()));
         create_asset_tx.partial_sign(&signers, last_blockhash);
 
         // Calling L1 mint endpoint
@@ -136,7 +116,10 @@ mod test {
             .to_request();
 
         let serv_resp = test::call_service(&app, req).await;
-        assert_eq!(serv_resp.status(), StatusCode::OK);
+        let code = serv_resp.status();
+        let resp_text = String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap();
+        println!("RESP: {resp_text}");
+        assert_eq!(code, StatusCode::OK);
     }
 
     /// Helps to wait for an async functionality to startup.
@@ -153,5 +136,26 @@ mod test {
             tokio::time::sleep(interval).await;
         }
         f().await
+    }
+
+    async fn await_solana_to_startup(solana_client: &RpcClient) {
+        await_for(10, Duration::from_secs(1), || solana_client.get_health())
+            .await
+            .unwrap();
+    }
+
+    async fn airdop(solana_client: &RpcClient, pubkeys: &[Pubkey]) {
+        let mut signatures = Vec::new();
+
+        for pubkey in pubkeys {
+            let signature = solana_client.request_airdrop(&pubkey, 20000000 * 10000).await.unwrap();
+            signatures.push(signature);
+        }
+
+        for signature in signatures {
+            while !(solana_client.confirm_transaction(&signature).await.unwrap()) {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        }
     }
 }

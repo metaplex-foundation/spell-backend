@@ -1,13 +1,15 @@
 use entities::l2::PublicKey;
+use serde::{Deserialize, Serialize};
 use solana_sdk::signature::{Keypair, Signature};
 use thiserror::Error;
 
 use solana_sdk::transaction::Transaction;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedMintIxInfo {
     pub asset_pubkey: PublicKey,
-    pub authority: PublicKey,
-    pub owner: PublicKey,
+    pub authority: Option<PublicKey>,
+    pub owner: Option<PublicKey>,
     pub payer: PublicKey,
     pub collection: Option<PublicKey>,
     pub name: String,
@@ -20,7 +22,7 @@ pub trait L1Service {
     /// and extracts NTF asset pubkey from it.
     /// ## Args:
     /// * `tx` - transaction created on the client side
-    fn extract_mint_asset_pubkey(&self, tx: &Transaction) -> anyhow::Result<ParsedMintIxInfo>;
+    fn parse_mint_transaction(&self, tx: &Transaction) -> anyhow::Result<ParsedMintIxInfo>;
 
     /// Accepts a transaction that contains single mpl-core CreateV1Builder instruction
     /// created on the client side and partially signed by the client,

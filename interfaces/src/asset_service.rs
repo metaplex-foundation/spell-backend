@@ -101,12 +101,16 @@ pub trait AssetService {
 pub enum L1MintError {
     #[error("Either locked or already minted")]
     NotUnlockedL2Asset,
-    #[error("Wrong asset name")]
-    WrongName,
+    #[error("Wrong asset name, expected='{0}', actual='{1}'")]
+    WrongName(String, String),
     #[error("Wrong metadata URI")]
     WrongMetadataUri,
+    #[error("Missing authority")]
+    MissingAuthority,
     #[error("Wrong authority")]
     WrongAuthority,
+    #[error("Missing owner")]
+    MissingOwner,
     #[error("Wrong owner")]
     WrongOwner,
     #[error("Wrong collection")]

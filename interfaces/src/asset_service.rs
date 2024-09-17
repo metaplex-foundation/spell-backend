@@ -1,5 +1,7 @@
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use serde::{Deserialize, Serialize};
+use solana_sdk::transaction::Transaction;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2AssetInfo {
@@ -90,4 +92,23 @@ pub trait AssetService {
         before: Option<&str>,
         after: Option<&str>,
     ) -> anyhow::Result<Vec<L2AssetInfo>>;
+
+    /// Execute asset L1 mint transaction received from the client.
+    async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()>;
+}
+
+#[derive(Error, Debug)]
+pub enum L1MintError {
+    #[error("Either locked or already minted")]
+    NotUnlockedL2Asset,
+    #[error("Wrong asset name")]
+    WrongName,
+    #[error("Wrong metadata URI")]
+    WrongMetadataUri,
+    #[error("Wrong authority")]
+    WrongAuthority,
+    #[error("Wrong owner")]
+    WrongOwner,
+    #[error("Wrong collection")]
+    WrongCollection,
 }

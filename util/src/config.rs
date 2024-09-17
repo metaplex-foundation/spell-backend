@@ -4,6 +4,7 @@
 //! TOML file in `config` directory.
 use crate::str_util::{mask_creds, mask_url_passwd};
 use aws_config::{BehaviorVersion, Region};
+use cached::proc_macro::cached;
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 use std::net::Ipv4Addr;
@@ -21,6 +22,11 @@ pub enum EnvProfile {
     Prod,
     Local,
     Dev,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SolanaCfg {
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -101,6 +107,18 @@ impl fmt::Debug for DatabaseCfg {
     }
 }
 
+#[derive(Debug, Deserialize, Clone, Hash, PartialEq, Eq)]
+pub enum SecretCfg {
+    Plain(String),
+    EnvVar(String),
+    File(String),
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SecretsCfg {
+    pub master_mnemonic: SecretCfg,
+}
+
 #[allow(unused)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
@@ -108,6 +126,8 @@ pub struct Settings {
     pub json_rpc_server: JsonRpc,
     pub obj_storage: ObjStorageCfg,
     pub database: DatabaseCfg,
+    pub solana: SolanaCfg,
+    pub secrets: SecretsCfg,
     pub env: EnvProfile,
 }
 
@@ -160,8 +180,8 @@ impl Settings {
     }
 
     pub fn master_key_seed(&self) -> Vec<u8> {
-        // TODO: decide how to pass keys to the app
-        solana_sdk::signature::generate_seed_from_seed_phrase_and_passphrase("", "")
+        let mnemonic = resolve_value_source(&self.secrets.master_mnemonic);
+        solana_sdk::signature::generate_seed_from_seed_phrase_and_passphrase(&mnemonic, "")
     }
 }
 
@@ -187,4 +207,13 @@ fn find_config_file(base_path: &str, name: &str) -> PathBuf {
     }
 
     config_dir.join(name)
+}
+
+#[cached(key = "String", convert = r##"{ format!("{}", 0) }"##)]
+fn resolve_value_source(value_source: &SecretCfg) -> String {
+    match value_source {
+        SecretCfg::Plain(v) => v.to_owned(),
+        SecretCfg::EnvVar(key) => std::env::var(key).unwrap(),
+        SecretCfg::File(path) => std::fs::read_to_string(path).unwrap(),
+    }
 }

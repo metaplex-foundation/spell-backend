@@ -17,11 +17,16 @@ secret_access_key = "password"
 bucket_for_json_metadata = "asset-metadata"
 bucket_for_binary_assets = "binary-assets"
 
+[solana]
+url = "https://api.devnet.solana.com"
 
 [database]
 connection_url="postgres://postgres:postgres@localhost:5432/spell-wallet"
 min_connections = 1
 max_connections = 20
+
+[secrets]
+master_mnemonic = { Plain = "" }
 
 [metrics]
 enabled = false

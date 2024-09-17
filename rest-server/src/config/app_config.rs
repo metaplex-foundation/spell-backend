@@ -1,6 +1,6 @@
 use crate::config::app_context::ApiKeysProviderCtx;
 use crate::endpoints::health_check::{health, secured_health};
-use crate::endpoints::l2_assets::{create_asset, get_asset, get_metadata, update_asset};
+use crate::endpoints::l2_assets::{create_asset, get_asset, get_metadata, mint_transaction, update_asset};
 use actix_web::web::{Data, ServiceConfig};
 use entities::api_key::{ApiKey, ApiKeys, Username};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
@@ -57,6 +57,7 @@ impl AppConfig {
                 .service(update_asset)
                 .service(get_asset)
                 .service(get_metadata)
+                .service(mint_transaction)
                 .service(secured_health);
         }
     }

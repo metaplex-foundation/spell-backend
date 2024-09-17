@@ -23,8 +23,8 @@ async fn test_save_fetch() {
         authority: rand_pubkey(),
         create_timestamp: NaiveDateTime::default(),
         update_timestamp: NaiveDateTime::default(),
-        pib44_account_num: 1,
-        pib44_address_num: 1,
+        bip44_account_num: 1,
+        bip44_address_num: 1,
     };
 
     storage.save(&asset).await.unwrap();

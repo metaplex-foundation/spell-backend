@@ -3,6 +3,7 @@ use crate::config::types::MetadataUriCreator;
 
 use interfaces::asset_service::AssetService;
 use service::asset_service_impl::AssetServiceImpl;
+use solana_integration::l1_service_solana::SolanaService;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -56,6 +57,8 @@ impl AppCtx {
 
         let wallet_producer = HdWalletProducer::from_seed(app_config.settings.master_key_seed());
 
+        let solana_service = Arc::new(SolanaService::new(&app_config.settings.solana.url));
+
         let l2_storage = Arc::new(L2StoragePg::new_from_pool(connection_pool));
         let s3_storage = Arc::new(s3_storage);
 
@@ -66,6 +69,8 @@ impl AppCtx {
                 l2_storage: l2_storage.clone(),
                 asset_metadata_storage: s3_storage.clone(),
                 blob_storage: s3_storage.clone(),
+                s1_service: solana_service,
+                metadata_server_base_url: app_config.settings.rest_server.base_url.clone(),
             }),
             metadata_uri_base,
         }

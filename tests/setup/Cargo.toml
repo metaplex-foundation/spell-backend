@@ -11,6 +11,7 @@ util = { path = "../../util"}
 anyhow = { workspace = true }
 
 rand = "0.8"
+base64 = { workspace = true }
 
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["postgres", "localstack"]  }
@@ -23,3 +24,4 @@ aws-config = { workspace = true }
 aws-types = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 
+solana-sdk = { workspace = true }

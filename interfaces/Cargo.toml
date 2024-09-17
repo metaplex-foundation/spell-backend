@@ -6,7 +6,10 @@ edition = "2021"
 [dependencies]
 entities = { path = "../entities"}
 anyhow = { workspace = true }
+thiserror = { workspace = true }
 serde = { workspace = true }
 chrono = { workspace = true }
 
 async-trait = { workspace = true }
+
+solana-sdk = { workspace = true }

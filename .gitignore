@@ -26,3 +26,5 @@ config/*.toml
 !config/local.toml
 !config/dev.toml
 !config/prod.toml
+
+**/test-ledger/

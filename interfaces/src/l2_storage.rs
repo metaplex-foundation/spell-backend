@@ -23,6 +23,11 @@ pub trait L2Storage {
         before: Option<&str>,
         after: Option<&str>,
     ) -> anyhow::Result<Vec<L2Asset>>;
+
+    /// Should guarantee atomic status update.
+    async fn lock_asset_before_minting(&self, pubkey: &PublicKey) -> anyhow::Result<bool>;
+    async fn finilize_minted(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
+    async fn mint_didnt_happen(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,4 +43,10 @@ pub struct DerivationValues {
 pub trait Bip44DerivationSequence {
     /// Returns next value of account and address
     async fn next_account_and_address(&self) -> anyhow::Result<DerivationValues>;
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum L2StorageError {
+    #[error("No asset identified by pubkey={0:?}")]
+    L2AssetNotFound(PublicKey),
 }

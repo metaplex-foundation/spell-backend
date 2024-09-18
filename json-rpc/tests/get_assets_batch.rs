@@ -1,8 +1,8 @@
 use crate::utils::{create_different_assets_requests, fill_database_with_test_data, form_asset_json_uri};
+use entities::dto::Asset;
 use json_rpc::config::app_config::AppConfig;
 use json_rpc::config::app_context::AppCtx;
 use json_rpc::endpoints::get_nft::get_asset_batch;
-use json_rpc::endpoints::rpc_asset_models::Asset;
 use json_rpc::endpoints::types::GetAssetBatch;
 use serde_json::Value;
 use setup::TestEnvironmentCfg;

@@ -27,6 +27,7 @@ max_connections = 20
 
 [secrets]
 master_mnemonic = { Plain = "" }
+rest_api_keys = { Plain = "111:name1;222:name2;333:name3" }
 
 [metrics]
 enabled = false

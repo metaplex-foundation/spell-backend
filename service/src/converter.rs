@@ -1,7 +1,6 @@
 use entities::{
+    dto::{Asset, AssetExtended},
     l2::{L2Asset, PublicKey},
-    rpc_asset_models::Asset,
-    types::AssetExtended,
 };
 use util::publickey::PublicKeyExt;
 

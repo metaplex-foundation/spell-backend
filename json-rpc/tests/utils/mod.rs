@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use entities::dto::Asset;
 use entities::l2::PublicKey;
 use interfaces::asset_service::L2AssetInfo;
 use json_rpc::config::app_context::ArcedAppCtx;
-use json_rpc::endpoints::rpc_asset_models::Asset;
 use json_rpc::endpoints::types::{AssetList, JsonRpcError};
 use serde::{Deserialize, Serialize};
 use std::error::Error;

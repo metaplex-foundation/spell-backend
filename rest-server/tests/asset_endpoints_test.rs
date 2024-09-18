@@ -4,7 +4,7 @@ mod test_app_util;
 mod tests {
     use actix_web::{body::MessageBody, http::StatusCode, test};
     use entities::l2::PublicKey;
-    use rest_server::endpoints::l2_assets::{CreateAssetRequest, UpdateAssetRequest};
+    use rest_server::rest::endpoints::l2_assets::{CreateAssetRequest, UpdateAssetRequest};
     use setup::TestEnvironmentCfg;
     use util::publickey::PublicKeyExt;
 

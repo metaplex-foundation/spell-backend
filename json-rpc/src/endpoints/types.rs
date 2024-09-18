@@ -1,6 +1,6 @@
-use crate::endpoints::rpc_asset_models::Asset;
+use entities::dto::Asset;
 use entities::l2::{
-    AssetSortBy as L2AssetSortBy, AssetSortDirection as L2AssetSortDirection, AssetSorting as L2AssetSorting, L2Asset,
+    AssetSortBy as L2AssetSortBy, AssetSortDirection as L2AssetSortDirection, AssetSorting as L2AssetSorting,
 };
 use jsonrpc_core::Error;
 use serde::{Deserialize, Serialize};
@@ -105,18 +105,4 @@ pub struct GetAssetsByCreator {
     pub before: Option<String>,
     pub after: Option<String>,
     pub cursor: Option<String>,
-}
-
-// TODO: merge with other asset types
-pub struct AssetExtended {
-    pub asset: L2Asset,
-    pub metadata_uri: String,
-    pub royalty_basis_points: u16,
-}
-
-impl AssetExtended {
-    // TODO: use the basis points from db
-    pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
-        Self { asset, metadata_uri, royalty_basis_points: 0 }
-    }
 }

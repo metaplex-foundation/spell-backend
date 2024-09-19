@@ -6,9 +6,7 @@ use pg::PgContainer;
 use s3::S3Container;
 use std::net::Ipv4Addr;
 use test_validator_runner::{SolanaProcess, TestValidatorRunner};
-use util::config::{
-    DatabaseCfg, EnvProfile, JsonRpc, ObjStorageCfg, RestServerCfg, SecretCfg, SecretsCfg, Settings, SolanaCfg,
-};
+use util::config::{DatabaseCfg, JsonRpc, ObjStorageCfg, RestServerCfg, SecretCfg, SecretsCfg, Settings, SolanaCfg};
 
 pub mod data_gen;
 pub mod pg;
@@ -117,10 +115,13 @@ impl TestEnvironment {
             },
             database: self.database_cfg().await,
             obj_storage: self.obj_storage_cfg().await,
-            env: EnvProfile::Local,
+            env: "it".to_string(),
             json_rpc_server: JsonRpc { port: 8081, host: Ipv4Addr::LOCALHOST, log_level: "DEBUG".to_string() },
             solana,
-            secrets: SecretsCfg { master_mnemonic: SecretCfg::Plain("".to_string()) },
+            secrets: SecretsCfg {
+                master_mnemonic: SecretCfg::Plain("".to_string()),
+                rest_api_keys: SecretCfg::Plain("111:name1;222:name2;333:name3".to_string()),
+            },
         }
     }
 }

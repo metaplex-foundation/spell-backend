@@ -1,10 +1,10 @@
-use crate::config::app_context::ArcedAppCtx;
 use crate::endpoints::errors::DasApiError;
-use crate::endpoints::rpc_asset_models::Asset;
 use crate::endpoints::types::{
-    AssetExtended, AssetList, GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcResponse,
+    AssetList, GetAsset, GetAssetBatch, GetAssetsByCreator, GetAssetsByOwner, JsonRpcResponse,
 };
 use crate::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
+use crate::setup::app_context::ArcedAppCtx;
+use entities::dto::{Asset, AssetExtended};
 use entities::l2::PublicKey;
 use interfaces::asset_service::L2AssetInfo;
 use serde_json::json;

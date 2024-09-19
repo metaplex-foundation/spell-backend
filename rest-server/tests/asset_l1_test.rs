@@ -1,13 +1,13 @@
 mod test_app_util;
 
-//#[cfg(not(any(skip_solana_tests)))]
+#[cfg(not(any(skip_solana_tests)))]
 #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
     use actix_http::StatusCode;
     use actix_web::{body::MessageBody, test};
     use mpl_core::instructions::CreateV1Builder;
-    use rest_server::endpoints::l2_assets::CreateAssetRequest;
+    use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
     use setup::TestEnvironmentCfg;
     use solana_client::nonblocking::rpc_client::RpcClient;
     use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};

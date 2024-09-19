@@ -1,4 +1,3 @@
-use crate::config::app_config::AppConfig;
 use actix_web::{web, App, HttpServer};
 use interfaces::asset_service::AssetService;
 use io::Result;
@@ -14,23 +13,46 @@ use util::{
     hd_wallet::HdWalletProducer,
 };
 
-pub async fn start_up_rest_server(app_config: AppConfig) -> Result<()> {
-    let host_and_port = app_config.host_and_port();
+use crate::rest::endpoints::l2_assets::{create_asset, get_asset, get_metadata, mint_transaction, update_asset};
+use crate::{
+    rest::auth::ApiKeysProviderCtx,
+    rest::endpoints::health_check::{health, secured_health},
+};
+use actix_web::web::{Data, ServiceConfig};
 
+pub async fn start_up_rest_server(cfg: &Settings) -> Result<()> {
     info!("Starting server");
 
-    let state = init_app_state().await;
-    let arc_state = Arc::new(state);
+    let state = Arc::new(init_app_state().await);
 
+    let cfg_clone = cfg.clone();
     HttpServer::new(move || {
         App::new()
-            .configure(app_config.app_configuration())
-            .app_data(web::Data::new(arc_state.clone()))
+            .configure(make_endpoints(&cfg_clone))
+            .app_data(web::Data::new(state.clone()))
             .wrap(TracingLogger::default())
     })
-    .bind(host_and_port)?
+    .bind((cfg.rest_server.host, cfg.rest_server.port))?
     .run()
-    .await
+    .await?;
+
+    Ok(())
+}
+
+pub fn make_endpoints(cfg: &Settings) -> impl FnOnce(&mut ServiceConfig) + '_ {
+    |serv_cfg: &mut ServiceConfig| {
+        let api_keys_provider_ctx = ApiKeysProviderCtx { api_keys: cfg.rest_api_keys() };
+
+        serv_cfg
+            .app_data(Data::new(api_keys_provider_ctx))
+            .service(health)
+            .service(create_asset)
+            .service(update_asset)
+            .service(get_asset)
+            .service(get_metadata)
+            .service(mint_transaction)
+            .service(secured_health);
+    }
 }
 
 #[derive(Clone)]

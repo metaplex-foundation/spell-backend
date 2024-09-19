@@ -4,9 +4,10 @@
 //! TOML file in `config` directory.
 use crate::str_util::{mask_creds, mask_url_passwd};
 use aws_config::{BehaviorVersion, Region};
-use cached::proc_macro::cached;
 use config::{Config, ConfigError, Environment, File};
+use entities::api_key::{ApiKey, ApiKeys, Username};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::{
     fmt,
@@ -15,6 +16,9 @@ use std::{
 
 const DEFAULT_CONFIG_FILE_PREFIX: &str = "config";
 const DEFAULT_CONFIG_FILE_NAME: &str = "default.toml";
+
+const API_KEYS_SEPARATOR: char = ';';
+const API_KEY_TO_NAME_SEPARATOR: char = ':';
 
 // TODO: Change back to String to support custom profiles
 #[derive(Debug, Deserialize, Clone, PartialEq)]
@@ -32,7 +36,7 @@ pub struct SolanaCfg {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RestServerCfg {
     pub port: u16,
-    pub host: Ipv4Addr, // TODO: delete since it should be a persistent hostname
+    pub host: Ipv4Addr,
     pub log_level: String,
     pub base_url: String, // e.g. https://spell-backend:8080
 }
@@ -40,7 +44,7 @@ pub struct RestServerCfg {
 #[derive(Debug, Deserialize, Clone)]
 pub struct JsonRpc {
     pub port: u16,
-    pub host: Ipv4Addr, // TODO: delete?
+    pub host: Ipv4Addr,
     pub log_level: String,
 }
 
@@ -117,6 +121,7 @@ pub enum SecretCfg {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SecretsCfg {
     pub master_mnemonic: SecretCfg,
+    pub rest_api_keys: SecretCfg,
 }
 
 #[allow(unused)]
@@ -128,7 +133,7 @@ pub struct Settings {
     pub database: DatabaseCfg,
     pub solana: SolanaCfg,
     pub secrets: SecretsCfg,
-    pub env: EnvProfile,
+    pub env: String,
 }
 
 impl Settings {
@@ -141,14 +146,6 @@ impl Settings {
     #[allow(clippy::should_implement_trait)]
     pub fn default() -> Result<Self, ConfigError> {
         Settings::load(None, None)
-    }
-
-    pub fn is_production_profile(&self) -> bool {
-        self.env.eq(&EnvProfile::Prod)
-    }
-
-    pub fn is_not_production_profile(&self) -> bool {
-        !self.is_production_profile()
     }
 
     fn load(env_name: Option<&str>, config_path: Option<&str>) -> Result<Self, ConfigError> {
@@ -183,6 +180,11 @@ impl Settings {
         let mnemonic = resolve_value_source(&self.secrets.master_mnemonic);
         solana_sdk::signature::generate_seed_from_seed_phrase_and_passphrase(&mnemonic, "")
     }
+
+    pub fn rest_api_keys(&self) -> ApiKeys {
+        let raw_string = resolve_value_source(&self.secrets.rest_api_keys);
+        parse_api_key(&raw_string)
+    }
 }
 
 fn default_config_file_path(base_path: &str) -> PathBuf {
@@ -209,7 +211,18 @@ fn find_config_file(base_path: &str, name: &str) -> PathBuf {
     config_dir.join(name)
 }
 
-#[cached(key = "String", convert = r##"{ format!("{}", 0) }"##)]
+fn parse_api_key(raw: &str) -> ApiKeys {
+    raw.split(API_KEYS_SEPARATOR)
+        .map(|api_key_name| {
+            api_key_name
+                .split_once(API_KEY_TO_NAME_SEPARATOR)
+                .expect("No name specified for API key.")
+        })
+        .map(|(api_key, name)| (ApiKey::new(api_key), Username::new(name)))
+        .collect::<HashMap<ApiKey, Username>>()
+        .into()
+}
+
 fn resolve_value_source(value_source: &SecretCfg) -> String {
     match value_source {
         SecretCfg::Plain(v) => v.to_owned(),

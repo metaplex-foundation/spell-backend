@@ -1,9 +1,9 @@
-use crate::config::app_config::AppConfig;
+use crate::setup::app_setup::AppSetup;
 use jsonrpc_http_server::ServerBuilder;
 use std::io::Result;
 use tracing::{error, info};
 
-pub async fn start_up_json_rpc(app_config: AppConfig) -> Result<()> {
+pub async fn start_up_json_rpc(app_config: AppSetup) -> Result<()> {
     let bind_address = app_config.socket_addr();
     let handler = app_config.register_rpc_methods().await;
 

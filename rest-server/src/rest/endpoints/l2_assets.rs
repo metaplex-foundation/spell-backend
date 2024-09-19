@@ -17,7 +17,7 @@ use serde_json::json;
 use solana_sdk::transaction::Transaction;
 use util::publickey::PublicKeyExt;
 
-use crate::{auth::api_key_extractor::ApiKeyExtractor, web::app::AppState};
+use crate::{rest::auth::ApiKeyExtractor, rest::web_app::AppState};
 
 const ASSET_NOT_FOUND: &str = "No asset found with given ID";
 

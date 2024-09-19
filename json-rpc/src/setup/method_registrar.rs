@@ -1,5 +1,5 @@
-use crate::config::app_context::ArcedAppCtx;
 use crate::endpoints::types::JsonRpcResponse;
+use crate::setup::app_context::ArcedAppCtx;
 use jsonrpc_core::{IoHandler, Params};
 use serde::de::DeserializeOwned;
 use std::any::type_name;
@@ -182,8 +182,8 @@ impl RpcMethodRegistrar {
 
 #[cfg(test)]
 mod test {
-    use crate::config::method_registrar::RpcMethodRegistrar;
     use crate::endpoints::get_nft::get_asset;
+    use crate::setup::method_registrar::RpcMethodRegistrar;
 
     #[test]
     fn test_extraction_of_endpoint_name() {

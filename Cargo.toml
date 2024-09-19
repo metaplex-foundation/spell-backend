@@ -8,7 +8,8 @@ members = [
     "tests/setup",
     "util",
     "service",
-    "entities", "solana-integration",
+    "entities",
+    "solana-integration",
 ]
 
 [workspace.dependencies]
@@ -57,8 +58,6 @@ url = "2.5.2"
 mime_guess = "2.0.5"
 jsonpath_lib = "0.3.0"
 base64 = "0.22.1"
-cached = "0.53"
-
 
 # Config and env
 config = "0.14"

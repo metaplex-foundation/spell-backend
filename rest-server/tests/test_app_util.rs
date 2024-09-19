@@ -7,12 +7,12 @@ use actix_web::dev::ServiceResponse;
 use actix_web::{test, web, App};
 use entities::api_key::ApiKeys;
 use entities::api_key::{ApiKey, Username};
-use entities::rpc_asset_models::Asset;
-use rest_server::endpoints::l2_assets::mint_transaction;
-use rest_server::{
-    config::app_context::ApiKeysProviderCtx,
+use entities::dto::Asset;
+use rest_server::rest::auth::ApiKeysProviderCtx;
+use rest_server::rest::endpoints::l2_assets::mint_transaction;
+use rest_server::rest::{
     endpoints::l2_assets::{create_asset, get_asset, get_metadata, update_asset},
-    web::app::create_app_state,
+    web_app::create_app_state,
 };
 
 use setup::TestEnvironment;
@@ -24,8 +24,9 @@ pub async fn init_web_app(
     let cfg = t_env.make_test_cfg().await;
     let state = Arc::new(create_app_state(cfg).await);
 
-    let api_keys_provider_ctx =
-        ApiKeysProviderCtx::from_memory(ApiKeys::from(HashMap::from([(ApiKey::new("111"), Username::new(""))])));
+    let api_keys_provider_ctx = ApiKeysProviderCtx {
+        api_keys: ApiKeys::from(HashMap::from([(ApiKey::new("111"), Username::new(""))])),
+    };
 
     let app = test::init_service(
         App::new()

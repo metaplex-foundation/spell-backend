@@ -3,6 +3,7 @@ const SOLANA_HOME: &str = "SOLANA_HOME";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed={}", SKIP_SOLANA_TESTS);
+    println!("cargo:rerun-if-env-changed={}", SOLANA_HOME);
 
     // We may want to explicitly skip solana tests (e.g. for CI)
     // Or if solana-test-validator is unavailable, tests won;t run

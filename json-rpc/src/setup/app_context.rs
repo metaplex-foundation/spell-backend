@@ -1,5 +1,5 @@
-use crate::config::app_config::AppConfig;
-use crate::config::types::MetadataUriCreator;
+use crate::setup::app_setup::AppSetup;
+use crate::setup::types::MetadataUriCreator;
 
 use interfaces::asset_service::AssetService;
 use service::asset_service_impl::AssetServiceImpl;
@@ -25,7 +25,7 @@ impl AppCtx {
         Arc::new(self)
     }
 
-    pub async fn new(app_config: &AppConfig) -> Self {
+    pub async fn new(app_config: &AppSetup) -> Self {
         let metadata_uri_base = MetadataUriCreator::new(format!(
             "{}:{}",
             app_config.settings.rest_server.host, app_config.settings.rest_server.port,

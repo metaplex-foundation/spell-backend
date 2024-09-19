@@ -1,11 +1,11 @@
-mod config;
 mod endpoints;
 mod logging;
 mod rpc;
+mod setup;
 
-use crate::config::app_config::AppConfig;
 use crate::logging::tracing::set_up_logging;
 use crate::rpc::app::start_up_json_rpc;
+use crate::setup::app_setup::AppSetup;
 use jsonrpc_http_server::tokio;
 use std::io::Result;
 use util::config::Settings;
@@ -16,5 +16,5 @@ async fn main() -> Result<()> {
 
     set_up_logging(&config_settings.json_rpc_server.log_level);
 
-    start_up_json_rpc(AppConfig::from_settings(config_settings)).await
+    start_up_json_rpc(AppSetup::from_settings(config_settings)).await
 }

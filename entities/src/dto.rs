@@ -1,19 +1,32 @@
-// TODO: remove same type from json-rpc module after json-rpc is stabilized
 use std::{cmp::Ordering, collections::BTreeMap, path::Path};
 
-use crate::types::AssetExtended;
+use crate::l2::L2Asset;
 use jsonpath_lib::JsonPathError;
 use mime_guess::Mime;
 use schemars::JsonSchema;
 use serde_json::{json, Value};
 use tracing::warn;
 use url::Url;
+
 use {
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };
 
 pub const COLLECTION_GROUP_KEY: &str = "collection";
+
+pub struct AssetExtended {
+    pub asset: L2Asset,
+    pub metadata_uri: String,
+    pub royalty_basis_points: u16,
+}
+
+impl AssetExtended {
+    // TODO: use the basis points from db
+    pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
+        Self { asset, metadata_uri, royalty_basis_points: 0 }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Quality {

@@ -46,7 +46,7 @@ pub enum L1MintTransactionError {
     UnexpectedInstructions,
     #[error("Malformed transaction")]
     MalformedTransaction,
-    #[error("Malformed mpl-code create v1 instuction")]
+    #[error("Malformed mpl-code create v1 instruction")]
     MalformedMintAssetInstruction,
     #[error("Wrong mpl-core program id")]
     WrongMplCoreProgrmaId,

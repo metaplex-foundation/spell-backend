@@ -1,10 +1,10 @@
 use crate::utils::{create_different_assets_requests, fill_database_with_test_data, form_asset_json_uri};
 use entities::dto::Asset;
-use json_rpc::config::app_config::AppConfig;
-use json_rpc::config::app_context::AppCtx;
 use json_rpc::endpoints::errors::DasApiError;
 use json_rpc::endpoints::get_nft::get_asset;
 use json_rpc::endpoints::types::GetAsset;
+use json_rpc::setup::app_context::AppCtx;
+use json_rpc::setup::app_setup::AppSetup;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
@@ -14,7 +14,7 @@ mod utils;
 #[tokio::test]
 async fn get_single_asset_positive() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -44,7 +44,7 @@ async fn get_single_asset_positive() {
 #[tokio::test]
 async fn get_single_asset_negative() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -60,7 +60,7 @@ async fn get_single_asset_negative() {
 #[tokio::test]
 async fn get_single_asset_using_invalid_pubkey() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 

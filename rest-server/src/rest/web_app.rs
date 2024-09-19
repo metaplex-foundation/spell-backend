@@ -32,7 +32,7 @@ pub async fn start_up_rest_server(cfg: &Settings) -> Result<()> {
             .app_data(web::Data::new(state.clone()))
             .wrap(TracingLogger::default())
     })
-    .bind(("127.0.0.1", cfg.rest_server.port))?
+    .bind((cfg.rest_server.host, cfg.rest_server.port))?
     .run()
     .await?;
 

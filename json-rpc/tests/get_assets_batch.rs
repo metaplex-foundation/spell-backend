@@ -1,9 +1,9 @@
 use crate::utils::{create_different_assets_requests, fill_database_with_test_data, form_asset_json_uri};
 use entities::dto::Asset;
-use json_rpc::config::app_config::AppConfig;
-use json_rpc::config::app_context::AppCtx;
 use json_rpc::endpoints::get_nft::get_asset_batch;
 use json_rpc::endpoints::types::GetAssetBatch;
+use json_rpc::setup::app_context::AppCtx;
+use json_rpc::setup::app_setup::AppSetup;
 use serde_json::Value;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
@@ -14,7 +14,7 @@ mod utils;
 #[tokio::test]
 async fn get_asset_batch_negative() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -40,7 +40,7 @@ async fn get_asset_batch_negative() {
 #[tokio::test]
 async fn get_asset_batch_positive() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -72,7 +72,7 @@ async fn get_asset_batch_positive() {
 #[tokio::test]
 async fn get_asset_batch_positive_with_non_existing_key() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 

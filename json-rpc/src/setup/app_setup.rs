@@ -1,17 +1,17 @@
-use crate::config::app_context::AppCtx;
-use crate::config::method_registrar::RpcMethodRegistrar;
 use crate::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
 use crate::endpoints::health_check::health;
+use crate::setup::app_context::AppCtx;
+use crate::setup::method_registrar::RpcMethodRegistrar;
 use jsonrpc_core::IoHandler;
 use std::net::SocketAddr;
 use util::config::Settings;
 
 #[derive(Clone, Debug)]
-pub struct AppConfig {
+pub struct AppSetup {
     pub settings: Settings,
 }
 
-impl AppConfig {
+impl AppSetup {
     pub fn from_settings(settings: Settings) -> Self {
         Self { settings }
     }

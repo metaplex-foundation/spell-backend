@@ -2,12 +2,12 @@ use crate::utils::{
     create_assets_with_same_owner_requests, create_assets_with_same_owner_requests_with_random_values,
     extract_asset_name_from_das_asset, fill_database_with_test_data, get_first_asset_name,
 };
-use json_rpc::config::app_config::AppConfig;
-use json_rpc::config::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::endpoints::errors::DasApiError;
 use json_rpc::endpoints::get_nft::get_asset_by_owner;
 use json_rpc::endpoints::types::{AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAssetsByOwner};
 use json_rpc::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
+use json_rpc::setup::app_context::{AppCtx, ArcedAppCtx};
+use json_rpc::setup::app_setup::AppSetup;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
 use util::publickey::PublicKeyExt;
@@ -26,7 +26,7 @@ async fn get_asset_list_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx)
 #[tokio::test]
 async fn get_assets_by_owner_sorting_by_created_date_desc() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -71,7 +71,7 @@ async fn get_assets_by_owner_sorting_by_created_date_desc() {
 #[tokio::test]
 async fn get_assets_by_owner_sorting_by_created_date_asc() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -115,7 +115,7 @@ async fn get_assets_by_owner_sorting_by_created_date_asc() {
 #[tokio::test]
 async fn get_assets_by_owner_with_limit_and_sorting_by_creation_date_desc() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -166,7 +166,7 @@ async fn get_assets_by_owner_with_limit_and_sorting_by_creation_date_desc() {
 #[tokio::test]
 async fn get_assets_by_non_existent_owner() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -195,7 +195,7 @@ async fn get_assets_by_non_existent_owner() {
 #[tokio::test]
 async fn get_assets_by_owner_with_invalid_limit() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -219,7 +219,7 @@ async fn get_assets_by_owner_with_invalid_limit() {
 #[tokio::test]
 async fn get_assets_by_owner_with_invalid_page() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -243,7 +243,7 @@ async fn get_assets_by_owner_with_invalid_page() {
 #[tokio::test]
 async fn get_assets_by_owner_using_cursor() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 
@@ -309,7 +309,7 @@ async fn get_assets_by_owner_using_cursor() {
 #[tokio::test]
 async fn get_assets_by_owner_with_pagination() {
     let t_env = TestEnvironmentCfg::default().with_pg().with_s3().start().await;
-    let app_ctx = AppCtx::new(&AppConfig::from_settings(t_env.make_test_cfg().await))
+    let app_ctx = AppCtx::new(&AppSetup::from_settings(t_env.make_test_cfg().await))
         .await
         .arced();
 

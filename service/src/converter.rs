@@ -26,6 +26,10 @@ impl AssetDtoConverter {
     }
 }
 
+pub fn get_metadata_uri_for_key_str(metadata_server_base_url: &str, public_key: &str) -> String {
+    format!("{}/asset/{}/metadata.json", metadata_server_base_url, public_key)
+}
+
 pub fn get_metadata_uri_for_key(metadata_server_base_url: &str, public_key: PublicKey) -> String {
-    format!("{}/asset/{}/metadata.json", metadata_server_base_url, public_key.to_bs58().as_str())
+    get_metadata_uri_for_key_str(metadata_server_base_url, public_key.to_bs58().as_str())
 }

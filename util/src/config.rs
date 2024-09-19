@@ -36,7 +36,7 @@ pub struct SolanaCfg {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RestServerCfg {
     pub port: u16,
-    pub host: Ipv4Addr, // TODO: delete since it should be a persistent hostname
+    pub host: Ipv4Addr,
     pub log_level: String,
     pub base_url: String, // e.g. https://spell-backend:8080
 }
@@ -44,7 +44,7 @@ pub struct RestServerCfg {
 #[derive(Debug, Deserialize, Clone)]
 pub struct JsonRpc {
     pub port: u16,
-    pub host: Ipv4Addr, // TODO: delete?
+    pub host: Ipv4Addr,
     pub log_level: String,
 }
 

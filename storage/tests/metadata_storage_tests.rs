@@ -6,7 +6,7 @@ use storage::asset_storage_s3::S3Storage;
 
 #[tokio::test]
 async fn test_save_fetch() {
-    let test_env = TestEnvironment::start().await;
+    let test_env = TestEnvironment::builder().with_pg().with_s3().start().await;
 
     let s3_client = test_env.metadata_storage_s3_client().await;
 

@@ -42,7 +42,7 @@ impl L2Storage for L2StoragePg {
                 .push_bind(asset.creator)
                 .push_bind(asset.collection)
                 .push_bind(asset.authority)
-                .push_bind(asset.royalty_basis_points as i64)
+                .push_bind(asset.royalty_basis_points as i16)
                 .push_bind(asset.create_timestamp)
                 .push_bind(asset.update_timestamp)
                 .push_bind(asset.bip44_account_num as i64)

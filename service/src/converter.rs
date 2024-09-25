@@ -4,8 +4,6 @@ use entities::{
 };
 use util::publickey::PublicKeyExt;
 
-const ROYALTY_BASIS_POINTS: u16 = 0;
-
 #[derive(Debug, Clone)]
 pub struct AssetDtoConverter {
     pub metadata_server_base_url: String,
@@ -16,7 +14,7 @@ impl AssetDtoConverter {
         let asset_ex = AssetExtended {
             asset: entity.clone(),
             metadata_uri: get_metadata_uri_for_key(&self.metadata_server_base_url, entity.pubkey),
-            royalty_basis_points: ROYALTY_BASIS_POINTS,
+            royalty_basis_points: entity.royalty_basis_points,
         };
 
         let metadata_json_text = metadata.unwrap_or("{}".to_string());

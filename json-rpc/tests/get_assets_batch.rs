@@ -136,7 +136,6 @@ async fn verify_royalty_points() {
             .expect("Failed to get assets.");
         serde_json::from_value::<Vec<Asset>>(res).expect("Failed serialize DAO asset..")
     };
-    let expected_royalty_basis_points = res.first().unwrap().clone().royalty.unwrap().basis_points;
 
     for (expected_pubkey, actual_dao_asset) in assets_pubkeys_data_in_db.into_iter().zip(res) {
         let actual_pubkey = actual_dao_asset.id;
@@ -146,7 +145,7 @@ async fn verify_royalty_points() {
         let actual_asset_json_uri = form_asset_json_uri(&actual_pubkey);
         assert_eq!(expected_asset_json_uri, actual_asset_json_uri);
 
-        let expected_royalty_basis_points = expected_royalty_basis_points;
+        let expected_royalty_basis_points = res.first().unwrap().clone().royalty.unwrap().basis_points;
         let actual_royalty_basis_points = actual_dao_asset.royalty.unwrap().basis_points;
         assert_eq!(expected_royalty_basis_points, actual_royalty_basis_points);
     }

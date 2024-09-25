@@ -24,6 +24,8 @@ pub struct L2Asset {
     /// Pubkey of user who uploaded the asset.
     pub authority: PublicKey,
 
+    pub royalty_basis_points: u16,
+
     /// The timestamp of the L2 asset "mint"
     pub create_timestamp: chrono::NaiveDateTime, // Need timezone?
 

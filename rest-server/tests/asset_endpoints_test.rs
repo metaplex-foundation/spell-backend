@@ -30,6 +30,7 @@ mod tests {
                 owner: bs58::encode(owner).into_string(),
                 creator: bs58::encode(creator).into_string(),
                 authority: bs58::encode(authority).into_string(),
+                royalty_basis_points: 12345,
                 collection: None,
             };
 

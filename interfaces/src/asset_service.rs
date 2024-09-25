@@ -28,6 +28,7 @@ pub trait AssetService {
     /// * `creator` -
     /// * `authority` - pubkey of a user who is generationg the asset
     /// * `name` - NFT asset name
+    /// * `royalty_basis_points` - royalty basis points of asset which will be used for minting it on L1
     /// * `collection` - a collection the asset belongs to
     async fn create_asset(
         &self,
@@ -36,6 +37,7 @@ pub trait AssetService {
         creator: PublicKey,
         authority: PublicKey,
         name: &str,
+        royalty_basis_points: u16,
         collection: Option<PublicKey>,
     ) -> anyhow::Result<L2AssetInfo>;
 

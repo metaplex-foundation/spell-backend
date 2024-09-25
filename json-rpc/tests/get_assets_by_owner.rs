@@ -3,7 +3,7 @@ use crate::utils::{
     extract_asset_name_from_das_asset, fill_database_with_test_data, get_first_asset_name,
 };
 use json_rpc::endpoints::errors::DasApiError;
-use json_rpc::endpoints::get_nft::get_asset_by_owner;
+use json_rpc::endpoints::get_asset::get_asset_by_owner;
 use json_rpc::endpoints::types::{AssetList, AssetSortBy, AssetSortDirection, AssetSorting, GetAssetsByOwner};
 use json_rpc::endpoints::{DEFAULT_LIMIT_FOR_PAGE, DEFAULT_MAX_PAGE_LIMIT};
 use json_rpc::setup::app_context::{AppCtx, ArcedAppCtx};

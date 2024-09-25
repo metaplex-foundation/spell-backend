@@ -22,6 +22,28 @@ mod tests {
         let creator = PublicKey::new_unique();
         let authority = PublicKey::new_unique();
 
+        // create asset with invalid basic points should return `BAD_REQUEST`
+        {
+            let req_payload = CreateAssetRequest {
+                name: "name1".to_string(),
+                metadata_json: metadata_json.clone(),
+                owner: bs58::encode(owner).into_string(),
+                creator: bs58::encode(creator).into_string(),
+                authority: bs58::encode(authority).into_string(),
+                royalty_basis_points: 10_001,
+                collection: None,
+            };
+
+            let req = test::TestRequest::post()
+                .uri("/asset")
+                .append_header(("x-api-key", "111"))
+                .set_json(req_payload)
+                .to_request();
+
+            let serv_resp = test::call_service(&app, req).await;
+            assert_eq!(serv_resp.status(), StatusCode::BAD_REQUEST);
+        };
+
         // create asset
         let created_asset = {
             let req_payload = CreateAssetRequest {

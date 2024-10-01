@@ -70,6 +70,26 @@ To set up buckets in MinIO:
    export RUN_ENV=john
    ```
 
+# Troubleshooting
+## Duplicate of `solana-program` crates
+The problem arises when more than one version of the `solana-program` crate is pulled in by different dependencies. To resolve this issue, you need to ensure that only one version of solana-program is used,
+and that version should be `2.x or higher`.
+To fix this issue, you'll need to manually edit your `Cargo.lock` file to ensure that only the correct version of `solana-program` is present.
+1) Open the `Cargo.lock` file in the root directory of your project.
+2) Search for all occurrences of the `solana-program` crate.
+3) **Ensure that only one version of the crate is listed, and it should be version 2.x or higher.**
+4) If you find any entries for `solana-program` with a version `lower than 2.x`, remove them.
+
+For example:
+```toml
+[[package]]
+name = "solana-program"
+version = "1.18.10"
+```
+In this case, **remove the entire block** related to the outdated version.
+
+
+
 # Run JSON RPC Server
 From root directory:
 ```shell

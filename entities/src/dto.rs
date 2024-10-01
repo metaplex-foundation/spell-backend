@@ -22,9 +22,8 @@ pub struct AssetExtended {
 }
 
 impl AssetExtended {
-    // TODO: use the basis points from db
     pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
-        Self { asset, metadata_uri, royalty_basis_points: 0 }
+        Self { royalty_basis_points: asset.royalty_basis_points, asset, metadata_uri }
     }
 }
 
@@ -577,6 +576,7 @@ mod test {
                 creator,
                 collection: Some(collection),
                 authority,
+                royalty_basis_points: 0,
                 create_timestamp: NaiveDateTime::parse_from_str("2015-02-18 23:16:09", "%Y-%m-%d %H:%M:%S").unwrap(),
                 update_timestamp: NaiveDateTime::parse_from_str("2015-02-18 23:16:09", "%Y-%m-%d %H:%M:%S").unwrap(),
                 bip44_account_num: 1,

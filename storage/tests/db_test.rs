@@ -21,6 +21,7 @@ async fn test_save_fetch() {
         creator: rand_pubkey(),
         collection: None,
         authority: rand_pubkey(),
+        royalty_basis_points: 0,
         create_timestamp: NaiveDateTime::default(),
         update_timestamp: NaiveDateTime::default(),
         bip44_account_num: 1,

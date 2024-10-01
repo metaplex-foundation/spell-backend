@@ -1,5 +1,5 @@
 pub mod errors;
-pub mod get_nft;
+pub mod get_asset;
 pub mod health_check;
 pub mod types;
 

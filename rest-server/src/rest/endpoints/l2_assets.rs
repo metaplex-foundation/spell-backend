@@ -20,6 +20,7 @@ use util::publickey::PublicKeyExt;
 use crate::{rest::auth::ApiKeyExtractor, rest::web_app::AppState};
 
 const ASSET_NOT_FOUND: &str = "No asset found with given ID";
+const ROYALTY_BASIS_POINTS_MAX_VALUE: u16 = 10_000;
 
 /// Request object for creating an L2 asset
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +39,9 @@ pub struct CreateAssetRequest {
 
     /// Base58 encoded public key of the asset authority
     pub authority: String,
+
+    /// Royalty basis points of asset, should be less than 10_000
+    pub royalty_basis_points: u16,
 
     /// Base58 encoded public key of a coolection the asset belongs to
     pub collection: Option<String>,
@@ -83,9 +87,14 @@ pub async fn create_asset(
     let Some(authority) = PublicKey::from_bs58(&req.authority) else {
         return bad_request("authority contains malformed public key");
     };
+    let royalty_basis_points = if req.royalty_basis_points > ROYALTY_BASIS_POINTS_MAX_VALUE {
+        return bad_request("royalty basis points cannot be greater than '10 000'");
+    } else {
+        req.royalty_basis_points
+    };
     let collection = if let Some(collection_str) = &req.collection {
         let Some(collection) = PublicKey::from_bs58(collection_str) else {
-            return bad_request("owner contains malformed public key");
+            return bad_request("collection contains malformed public key");
         };
         Some(collection)
     } else {
@@ -94,7 +103,7 @@ pub async fn create_asset(
 
     match state
         .asset_service
-        .create_asset(&req.metadata_json, owner, creator, authority, &req.name, collection)
+        .create_asset(&req.metadata_json, owner, creator, authority, &req.name, royalty_basis_points, collection)
         .await
     {
         Ok(L2AssetInfo { asset, metadata }) => {

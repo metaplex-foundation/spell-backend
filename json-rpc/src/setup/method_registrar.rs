@@ -182,7 +182,7 @@ impl RpcMethodRegistrar {
 
 #[cfg(test)]
 mod test {
-    use crate::endpoints::get_nft::get_asset;
+    use crate::endpoints::get_asset::get_asset;
     use crate::setup::method_registrar::RpcMethodRegistrar;
 
     #[test]

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::Utc;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
@@ -9,6 +7,7 @@ use interfaces::{
     l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage, L2StorageError},
 };
 use solana_sdk::{signer::Signer, transaction::Transaction};
+use std::sync::Arc;
 use tracing::info;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
 
@@ -34,6 +33,7 @@ impl AssetService for AssetServiceImpl {
         creator: PublicKey,
         authority: PublicKey,
         name: &str,
+        royalty_basis_points: u16,
         collection: Option<PublicKey>,
     ) -> anyhow::Result<L2AssetInfo> {
         validate_metadata_contains_uris(metadata_json)?;
@@ -55,6 +55,7 @@ impl AssetService for AssetServiceImpl {
             creator,
             collection,
             authority,
+            royalty_basis_points,
             create_timestamp: utc_now,
             update_timestamp: utc_now,
             bip44_account_num: account,

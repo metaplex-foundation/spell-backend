@@ -1,4 +1,4 @@
-use crate::endpoints::get_nft::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
+use crate::endpoints::get_asset::{get_asset, get_asset_batch, get_asset_by_creator, get_asset_by_owner};
 use crate::endpoints::health_check::health;
 use crate::setup::app_context::AppCtx;
 use crate::setup::method_registrar::RpcMethodRegistrar;

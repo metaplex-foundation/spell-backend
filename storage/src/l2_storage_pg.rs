@@ -5,6 +5,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgRow},
     ConnectOptions, PgPool, Postgres, QueryBuilder, Row,
 };
+use tracing::error;
 use tracing::log::LevelFilter;
 use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
 
@@ -25,6 +26,7 @@ impl L2Storage for L2StoragePg {
                     asset_creator,
                     asset_collection,
                     asset_authority,
+                    royalty_basis_points,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
                     bip44_account_num,
@@ -40,6 +42,7 @@ impl L2Storage for L2StoragePg {
                 .push_bind(asset.creator)
                 .push_bind(asset.collection)
                 .push_bind(asset.authority)
+                .push_bind(asset.royalty_basis_points as i16)
                 .push_bind(asset.create_timestamp)
                 .push_bind(asset.update_timestamp)
                 .push_bind(asset.bip44_account_num as i64)
@@ -73,6 +76,7 @@ impl L2Storage for L2StoragePg {
                     asset_creator,
                     asset_collection,
                     asset_authority,
+                    royalty_basis_points,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
                     bip44_account_num,
@@ -88,8 +92,9 @@ impl L2Storage for L2StoragePg {
             .build()
             .fetch_optional(&self.pool)
             .await?
-            .map(from_row)
+            .map(Self::from_row)
             .transpose()
+            .inspect_err(|e| error!("L2Storage error: {e}"))
     }
 
     async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>> {
@@ -104,6 +109,7 @@ impl L2Storage for L2StoragePg {
                     asset_authority,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
+                    royalty_basis_points,
                     bip44_account_num,
                     bip44_address_num
                 FROM l2_assets_v1
@@ -124,7 +130,7 @@ impl L2Storage for L2StoragePg {
             .fetch_all(&self.pool)
             .await?
             .into_iter()
-            .map(from_row)
+            .map(Self::from_row)
             .collect::<Result<Vec<L2Asset>, _>>()
     }
 
@@ -153,7 +159,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn lock_asset_before_minting(&self, pubkey: &PublicKey) -> anyhow::Result<bool> {
-        let update_result = sqlx::QueryBuilder::new(
+        let update_result = QueryBuilder::new(
             r#"
                 UPDATE l2_assets_v1
                 SET current_state = 'MINTING', asset_last_update_timestamp = NOW()
@@ -168,7 +174,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn finilize_minted(&self, pubkey: &PublicKey) -> anyhow::Result<()> {
-        sqlx::QueryBuilder::new(
+        QueryBuilder::new(
             r#"
                 UPDATE l2_assets_v1
                 SET current_state = 'L1_SOLANA', asset_last_update_timestamp = NOW()
@@ -182,7 +188,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn mint_didnt_happen(&self, pubkey: &PublicKey) -> anyhow::Result<()> {
-        sqlx::QueryBuilder::new(
+        QueryBuilder::new(
             r#"
                 UPDATE l2_assets_v1
                 SET current_state = 'L2', asset_last_update_timestamp = NOW()
@@ -234,6 +240,7 @@ impl L2StoragePg {
                     asset_creator,
                     asset_collection,
                     asset_authority,
+                    royalty_basis_points,
                     asset_create_timestamp,
                     asset_last_update_timestamp,
                     bip44_account_num,
@@ -269,7 +276,7 @@ impl L2StoragePg {
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
-                .map(from_row)
+                .map(Self::from_row)
                 .rev()
                 .collect::<Result<Vec<L2Asset>, _>>(),
             false => query_builder
@@ -277,7 +284,7 @@ impl L2StoragePg {
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
-                .map(from_row)
+                .map(Self::from_row)
                 .collect::<Result<Vec<L2Asset>, _>>(),
         }
     }
@@ -354,21 +361,31 @@ impl L2StoragePg {
 
         Ok(())
     }
-}
 
-fn from_row(row: PgRow) -> anyhow::Result<L2Asset> {
-    Ok(L2Asset {
-        pubkey: row.try_get("asset_pubkey").context("FromRowErr")?,
-        name: row.try_get("asset_name").context("FromRowErr")?,
-        owner: row.try_get("asset_owner").context("FromRowErr")?,
-        creator: row.try_get("asset_creator").context("FromRowErr")?,
-        collection: row.try_get("asset_collection").context("FromRowErr")?,
-        authority: row.try_get("asset_authority").context("FromRowErr")?,
-        create_timestamp: row.try_get("asset_create_timestamp").context("FromRowErr")?,
-        update_timestamp: row.try_get("asset_last_update_timestamp").context("FromRowErr")?,
-        bip44_account_num: row.try_get::<i64, _>("bip44_account_num").context("FromRowErr")? as u32,
-        bip44_address_num: row.try_get::<i64, _>("bip44_address_num").context("FromRowErr")? as u32,
-    })
+    fn from_row(row: PgRow) -> anyhow::Result<L2Asset> {
+        Ok(L2Asset {
+            pubkey: Self::try_get_from_row(&row, "asset_pubkey")?,
+            name: Self::try_get_from_row(&row, "asset_name")?,
+            owner: Self::try_get_from_row(&row, "asset_owner")?,
+            creator: Self::try_get_from_row(&row, "asset_creator")?,
+            collection: Self::try_get_from_row(&row, "asset_collection")?,
+            authority: Self::try_get_from_row(&row, "asset_authority")?,
+            royalty_basis_points: Self::try_get_from_row::<i16>(&row, "royalty_basis_points")? as u16,
+            create_timestamp: Self::try_get_from_row(&row, "asset_create_timestamp")?,
+            update_timestamp: Self::try_get_from_row(&row, "asset_last_update_timestamp")?,
+            bip44_account_num: Self::try_get_from_row::<i64>(&row, "bip44_account_num")? as u32,
+            bip44_address_num: Self::try_get_from_row::<i64>(&row, "bip44_address_num")? as u32,
+        })
+    }
+
+    fn try_get_from_row<'a, T>(row: &'a PgRow, index: &str) -> anyhow::Result<T>
+    where
+        T: sqlx::Decode<'a, Postgres> + sqlx::Type<Postgres>,
+    {
+        row.try_get::<'a, T, _>(index)
+            .inspect_err(|e| error!("FromRowError for: '{index}'. Cause: {e}"))
+            .context("FromRowError")
+    }
 }
 
 #[derive(sqlx::FromRow, Debug)]

@@ -22,7 +22,6 @@ pub struct AssetExtended {
 }
 
 impl AssetExtended {
-    // TODO: use the basis points from db
     pub fn new(asset: L2Asset, metadata_uri: String) -> Self {
         Self { royalty_basis_points: asset.royalty_basis_points, asset, metadata_uri }
     }

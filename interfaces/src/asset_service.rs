@@ -28,7 +28,8 @@ pub trait AssetService {
     /// * `creator` -
     /// * `authority` - pubkey of a user who is generationg the asset
     /// * `name` - NFT asset name
-    /// * `royalty_basis_points` - royalty basis points of asset which will be used for minting it on L1
+    /// * `royalty_basis_points` - royalty basis points of asset which will be used for minting it on L1.
+    ///     It represents a `%` so it cant be less than `0` and more than `10_000`
     /// * `collection` - a collection the asset belongs to
     async fn create_asset(
         &self,

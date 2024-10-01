@@ -94,7 +94,7 @@ pub async fn create_asset(
     };
     let collection = if let Some(collection_str) = &req.collection {
         let Some(collection) = PublicKey::from_bs58(collection_str) else {
-            return bad_request("owner contains malformed public key");
+            return bad_request("collection contains malformed public key");
         };
         Some(collection)
     } else {

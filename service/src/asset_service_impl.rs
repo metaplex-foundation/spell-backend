@@ -236,7 +236,7 @@ impl AssetService for AssetServiceImpl {
 
 impl AssetServiceImpl {
     const AWAIT_TIME_TO_CALL_BLOCKCHAIN: Duration = Duration::from_secs(10);
-    const AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN: usize = 100;
+    const AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN: u8 = 18;
 
     fn validate_mint_transaction_data(&self, mint_ix: &ParsedMintIxInfo, l2_asset: &L2Asset) -> anyhow::Result<()> {
         let expected_metadata_url = get_metadata_uri_for_key(&self.metadata_server_base_url, l2_asset.pubkey);
@@ -282,10 +282,14 @@ impl AssetServiceImpl {
         l2_storage: Arc<dyn L2Storage + Sync + Send>,
     ) -> anyhow::Result<()> {
         let asset_pubkey_as_str = asset_pubkey.to_string();
-        let mut retry_counter = 1_usize;
+        let mut retry_counter = 1_u8;
 
         loop {
             if retry_counter >= Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN {
+                info!(
+                    "Amount of attempts to call blockchain reached the limit - {}; Rolling back mint.",
+                    Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN
+                );
                 return l2_storage
                     .mint_didnt_happen(&asset_pubkey)
                     .await

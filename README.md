@@ -89,6 +89,23 @@ version = "1.18.10"
 In this case, **remove the entire block** related to the outdated version.
 
 
+## Extra entry found: `._genesis.bin`
+You can get error while running `solana-test-validator` on `macOS`:
+```
+failed to start validator: Failed to create ledger at test-ledger: io error: Error checking to unpack genesis archive: Archive error: extra entry found: "._genesis.bin" Regular/failed to stash problematic rocksdb: Directory not empty (os error 66)
+```
+To resolve this issue, you need to install `gnu-tar` and update your `PATH` environment variable if you plan to run `solana-test-validator` locally. Follow these steps:
+```shell
+brew install gnu-tar
+# Put this in ~/.zshrc 
+export PATH="/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH"
+```
+
+In our testing environment, we have implemented a mechanism to prevent this failure by automatically exporting the `gnu-tar` path within the code. 
+Therefore, if you are running `solana-test-validator` only in tests, you just need to install `gnu-tar`.
+
+You can find more info here: https://solana.stackexchange.com/questions/4499/blockstore-error-when-starting-solana-test-validator-on-macos-13-0-1/4761#4761
+
 
 # Run JSON RPC Server
 From root directory:

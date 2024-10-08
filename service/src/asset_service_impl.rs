@@ -227,8 +227,7 @@ impl AssetService for AssetServiceImpl {
             asset_pubkey,
             self.l1_service.clone(),
             self.l2_storage.clone(),
-        ))
-        .await;
+        ));
 
         Ok(())
     }
@@ -267,7 +266,7 @@ impl AssetServiceImpl {
         Ok(())
     }
 
-    async fn in_background<F>(future: F)
+    fn in_background<F>(future: F)
     where
         F: Future + Send + 'static,
         F::Output: Send + 'static,
@@ -282,21 +281,8 @@ impl AssetServiceImpl {
         l2_storage: Arc<dyn L2Storage + Sync + Send>,
     ) -> anyhow::Result<()> {
         let asset_pubkey_as_str = asset_pubkey.to_string();
-        let mut retry_counter = 1_u8;
 
-        loop {
-            if retry_counter >= Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN {
-                info!(
-                    "Amount of attempts to call blockchain reached the limit - {}; Rolling back mint.",
-                    Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN
-                );
-                return l2_storage
-                    .mint_didnt_happen(&asset_pubkey)
-                    .await
-                    .inspect(|_| info!("Mint for '{asset_pubkey_as_str}' successfully rolled back."))
-                    .inspect_err(|e| error!("Failed to rollback mint because: {e}!"));
-            };
-
+        for _ in 0..=Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN {
             match solana_service.is_asset_minted(&signature).await {
                 Ok(true) => {
                     info!("Successfully minted asset '{asset_pubkey_as_str}' in transaction '{signature}'.");
@@ -319,9 +305,18 @@ impl AssetServiceImpl {
                     tokio::time::sleep(Self::AWAIT_TIME_TO_CALL_BLOCKCHAIN).await
                 }
             }
-
-            retry_counter += 1;
         }
+
+        info!(
+            "Amount of attempts to call blockchain reached the limit - {}; Rolling back mint.",
+            Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN
+        );
+
+        l2_storage
+            .mint_didnt_happen(&asset_pubkey)
+            .await
+            .inspect(|_| info!("Mint for '{asset_pubkey_as_str}' successfully rolled back."))
+            .inspect_err(|e| error!("Failed to rollback mint because: {e}!"))
     }
 
     async fn is_asset_already_sent_to_mint(&self, asset_pubkey: &PublicKey) -> Option<Signature> {

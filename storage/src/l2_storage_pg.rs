@@ -240,8 +240,8 @@ impl L2StoragePg {
 
     pub async fn new_from_url(url: &str, min_connections: u32, max_connections: u32) -> anyhow::Result<L2StoragePg> {
         let mut options = url.parse::<PgConnectOptions>()?;
-        options.log_statements(LevelFilter::Info);
-        options.log_slow_statements(LevelFilter::Info, std::time::Duration::from_secs(100));
+        options.log_statements(LevelFilter::Off);
+        options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
         options = options.extra_float_digits(None); // needed for Pgbouncer
 
         let pool = PgPoolOptions::new()

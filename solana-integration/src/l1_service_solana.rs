@@ -39,7 +39,7 @@ impl L1Service for SolanaService {
             .client
             .get_signature_status(tx_signature)
             .await
-            .context("Field to send RPC call!")?
+            .context("Failed to send RPC call!")?
             .context("Corresponding transaction is being processed!")?
         {
             Ok(_) => {

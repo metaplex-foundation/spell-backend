@@ -36,6 +36,17 @@ pub trait L1Service {
     ///    (We use bip44 to derive this keypair from our master keypair,
     ///    when we initially an L2 asset)
     async fn execute_mint_transaction(&self, tx: Transaction, asset_keypair: &Keypair) -> anyhow::Result<Signature>;
+
+    /// Sends a request to Solana to retrieve the transaction processing status.
+    ///
+    /// This function checks the mint status of a transaction and returns the following:
+    /// * `Err(_)` - if the transaction is not found or is still being processed.
+    /// * `Ok(true)` - if the minting process has been successfully completed.
+    /// * `Ok(false)` - if the minting process was declined.
+    ///
+    /// The combination of `Ok(true) | Err(_)` means that the minting of the asset was either rejected
+    ///     or is still being processed.
+    async fn is_asset_minted(&self, tx_signature: &Signature) -> anyhow::Result<bool>;
 }
 
 #[derive(Error, Debug)]

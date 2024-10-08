@@ -26,7 +26,9 @@ pub trait L2Storage {
 
     /// Should guarantee atomic status update.
     async fn lock_asset_before_minting(&self, pubkey: &PublicKey) -> anyhow::Result<bool>;
-    async fn finilize_minted(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
+    async fn find_l1_asset_signature(&self, asset_pubkey: &PublicKey) -> Option<Vec<u8>>;
+    async fn add_l1_asset(&self, pubkey: &PublicKey, tx_signature: &[u8]) -> anyhow::Result<()>;
+    async fn finalize_mint(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
     async fn mint_didnt_happen(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
 }
 

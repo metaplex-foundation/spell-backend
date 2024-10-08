@@ -1,13 +1,13 @@
+use base64::Engine;
+use solana_sdk::pubkey::Pubkey;
 use std::{
+    env,
     fs::File,
     io::Write,
     ops::Deref,
     path::Path,
     process::{Child, Command},
 };
-
-use base64::Engine;
-use solana_sdk::pubkey::Pubkey;
 
 const PROGRAM_NAME: &'static str = "solana-test-validator";
 const ENV_SOLANA_HOME: &'static str = "SOLANA_HOME";
@@ -86,9 +86,16 @@ impl TestValidatorRunner {
             cmd.args(["--account", &account.pubkey.to_string(), &file_path]);
         }
 
-        let child = cmd.spawn()?;
+        cmd.arg("--quiet");
+        if cfg!(target_os = "macos") {
+            eprintln!("As you running macOS test validator could fail, so we adding path to 'gnu-tar' to env.");
+            eprintln!("Also please check that you have 'gnu-tar' installed!");
+            let current_path = env::var("PATH").expect("Cannot extract 'PATH'!");
+            let path_with_gnu_tar = format!("/opt/homebrew/opt/gnu-tar/libexec/gnubin:{current_path}");
+            cmd.env("PATH", path_with_gnu_tar);
+        }
 
-        Ok(SolanaProcess { solana_url: format!("http://127.0.0.1:{}", self.port), process: child })
+        Ok(SolanaProcess { solana_url: format!("http://127.0.0.1:{}", self.port), process: cmd.spawn()? })
     }
 
     fn find_in_paths(&self, file: &str) -> Option<String> {

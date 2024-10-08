@@ -1,3 +1,4 @@
+use crate::converter::get_metadata_uri_for_key;
 use chrono::Utc;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
@@ -6,12 +7,14 @@ use interfaces::{
     l1_service::{L1Service, ParsedMintIxInfo},
     l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage, L2StorageError},
 };
+use solana_sdk::signature::Signature;
 use solana_sdk::{signer::Signer, transaction::Transaction};
+use std::future::Future;
 use std::sync::Arc;
-use tracing::info;
+use std::time::Duration;
+use tracing::{debug, error, info};
+use util::publickey::PublicKeyExt;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
-
-use crate::converter::get_metadata_uri_for_key;
 
 #[derive(Clone)]
 pub struct AssetServiceImpl {
@@ -20,7 +23,7 @@ pub struct AssetServiceImpl {
     pub l2_storage: Arc<dyn L2Storage + Sync + Send>,
     pub asset_metadata_storage: Arc<dyn AssetMetadataStorage + Sync + Send>,
     pub blob_storage: Arc<dyn BlobStorage + Sync + Send>,
-    pub s1_service: Arc<dyn L1Service + Sync + Send>,
+    pub l1_service: Arc<dyn L1Service + Sync + Send>,
     pub metadata_server_base_url: String,
 }
 
@@ -177,7 +180,7 @@ impl AssetService for AssetServiceImpl {
     }
 
     async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()> {
-        let mint_ix = self.s1_service.parse_mint_transaction(&tx)?;
+        let mint_ix = self.l1_service.parse_mint_transaction(&tx)?;
         let asset_pubkey = mint_ix.asset_pubkey;
 
         let Some(l2_asset) = self.l2_storage.find(&asset_pubkey).await? else {
@@ -187,30 +190,54 @@ impl AssetService for AssetServiceImpl {
         self.validate_mint_transaction_data(&mint_ix, &l2_asset)?;
 
         if !self.l2_storage.lock_asset_before_minting(&asset_pubkey).await? {
-            anyhow::bail!(L1MintError::NotUnlockedL2Asset)
+            if let Some(signature) = self.is_asset_already_sent_to_mint(&asset_pubkey).await {
+                if let Ok(true) | Err(_) = self.l1_service.is_asset_minted(&signature).await {
+                    anyhow::bail!(
+                        "Asset '{l2_asset}' has already been sent for mint!",
+                        l2_asset = l2_asset.pubkey.to_string()
+                    )
+                }
+            }
         };
 
         let asset_kp = self
             .wallet_producer
             .make_hd_wallet(l2_asset.bip44_account_num, l2_asset.bip44_address_num);
 
-        let tx_signature = match self.s1_service.execute_mint_transaction(tx, &asset_kp).await {
-            Ok(signature) => signature,
+        let tx_signature = match self.l1_service.execute_mint_transaction(tx, &asset_kp).await {
+            Ok(signature) => {
+                info!(
+                    "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent!",
+                    asset_pubkey = asset_pubkey.to_string()
+                );
+                signature
+            }
             Err(e) => {
                 self.l2_storage.mint_didnt_happen(&asset_pubkey).await?;
                 anyhow::bail!(e);
             }
         };
 
-        info!("Successfully minted asset={asset_pubkey:?} in transaction={tx_signature}");
+        self.l2_storage
+            .add_l1_asset(&asset_pubkey, &tx_signature.as_ref())
+            .await?;
 
-        let _ = self.l2_storage.finilize_minted(&asset_pubkey).await;
+        Self::in_background(Self::await_for_mint_status_and_save_it(
+            tx_signature,
+            asset_pubkey,
+            self.l1_service.clone(),
+            self.l2_storage.clone(),
+        ))
+        .await;
 
         Ok(())
     }
 }
 
 impl AssetServiceImpl {
+    const AWAIT_TIME_TO_CALL_BLOCKCHAIN: Duration = Duration::from_secs(10);
+    const AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN: usize = 100;
+
     fn validate_mint_transaction_data(&self, mint_ix: &ParsedMintIxInfo, l2_asset: &L2Asset) -> anyhow::Result<()> {
         let expected_metadata_url = get_metadata_uri_for_key(&self.metadata_server_base_url, l2_asset.pubkey);
 
@@ -238,5 +265,71 @@ impl AssetServiceImpl {
             anyhow::bail!(L1MintError::WrongOwner)
         }
         Ok(())
+    }
+
+    async fn in_background<F>(future: F)
+    where
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
+    {
+        tokio::spawn(future);
+    }
+
+    async fn await_for_mint_status_and_save_it(
+        signature: Signature,
+        asset_pubkey: PublicKey,
+        solana_service: Arc<dyn L1Service + Sync + Send>,
+        l2_storage: Arc<dyn L2Storage + Sync + Send>,
+    ) -> anyhow::Result<()> {
+        let asset_pubkey_as_str = asset_pubkey.to_string();
+        let mut retry_counter = 1_usize;
+
+        loop {
+            if retry_counter >= Self::AMOUNT_OF_ATTEMPTS_TO_CALL_BLOCKCHAIN {
+                return l2_storage
+                    .mint_didnt_happen(&asset_pubkey)
+                    .await
+                    .inspect(|_| info!("Mint for '{asset_pubkey_as_str}' successfully rolled back."))
+                    .inspect_err(|e| error!("Failed to rollback mint because: {e}!"));
+            };
+
+            match solana_service.is_asset_minted(&signature).await {
+                Ok(true) => {
+                    info!("Successfully minted asset '{asset_pubkey_as_str}' in transaction '{signature}'.");
+                    return l2_storage
+                        .finalize_mint(&asset_pubkey)
+                        .await
+                        .inspect(|_| info!("Mint for '{asset_pubkey_as_str}' successfully persisted."))
+                        .inspect_err(|e| error!("Failed to finalize mint because: {e}!"));
+                }
+                Ok(false) => {
+                    info!("Failed to mint asset '{asset_pubkey_as_str}' in transaction '{signature}'.");
+                    return l2_storage
+                        .mint_didnt_happen(&asset_pubkey)
+                        .await
+                        .inspect(|_| info!("Mint for '{asset_pubkey_as_str}' successfully rolled back."))
+                        .inspect_err(|e| error!("Failed to rollback mint because: {e}!"));
+                }
+                Err(e) => {
+                    debug!("Waiting for mint of {asset_pubkey_as_str}; {e}");
+                    tokio::time::sleep(Self::AWAIT_TIME_TO_CALL_BLOCKCHAIN).await
+                }
+            }
+
+            retry_counter += 1;
+        }
+    }
+
+    async fn is_asset_already_sent_to_mint(&self, asset_pubkey: &PublicKey) -> Option<Signature> {
+        self.l2_storage
+            .find_l1_asset_signature(asset_pubkey)
+            .await
+            .and_then(Self::parse_signature)
+    }
+
+    fn parse_signature(signature: Vec<u8>) -> Option<Signature> {
+        Signature::try_from(signature)
+            .inspect_err(|_| error!("Failed to parse signature!"))
+            .ok()
     }
 }

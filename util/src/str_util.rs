@@ -5,6 +5,10 @@ lazy_static! {
     static ref URL_PASSWD_RE: Regex = Regex::new(r"\w+:\/\/\w+:(\w+)@.*").unwrap();
 }
 
+pub fn form_url(host: &str, port: u16, path: &str) -> String {
+    format!("{host}:{port}/{path}")
+}
+
 pub fn mask_url_passwd(url: &str) -> String {
     let mut masked_url = url.to_string();
 

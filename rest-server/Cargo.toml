@@ -37,6 +37,7 @@ solana-sdk = { workspace = true }
 solana-client = { workspace = true }
 mpl-core = { workspace = true }
 serial_test = { workspace = true }
+reqwest = { workspace = true }
 
 [build-dependencies]
 which = "6"

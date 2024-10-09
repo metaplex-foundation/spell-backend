@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer};
 use interfaces::asset_service::AssetService;
 use io::Result;
 use service::{asset_service_impl::AssetServiceImpl, converter::AssetDtoConverter};
@@ -23,13 +23,12 @@ use actix_web::web::{Data, ServiceConfig};
 pub async fn start_up_rest_server(cfg: &Settings) -> Result<()> {
     info!("Starting server");
 
-    let state = Arc::new(init_app_state().await);
-
+    let app_state = AppState::create_app_state(cfg).await;
     let cfg_clone = cfg.clone();
+
     HttpServer::new(move || {
         App::new()
-            .configure(make_endpoints(&cfg_clone))
-            .app_data(web::Data::new(state.clone()))
+            .configure(app_state.make_endpoints(&cfg_clone))
             .wrap(TracingLogger::default())
     })
     .bind((cfg.rest_server.host, cfg.rest_server.port))?
@@ -39,68 +38,67 @@ pub async fn start_up_rest_server(cfg: &Settings) -> Result<()> {
     Ok(())
 }
 
-pub fn make_endpoints(cfg: &Settings) -> impl FnOnce(&mut ServiceConfig) + '_ {
-    |serv_cfg: &mut ServiceConfig| {
-        let api_keys_provider_ctx = ApiKeysProviderCtx { api_keys: cfg.rest_api_keys() };
-
-        serv_cfg
-            .app_data(Data::new(api_keys_provider_ctx))
-            .service(health)
-            .service(create_asset)
-            .service(update_asset)
-            .service(get_asset)
-            .service(get_metadata)
-            .service(mint_transaction)
-            .service(secured_health);
-    }
-}
-
 #[derive(Clone)]
 pub struct AppState {
     pub asset_service: Arc<dyn AssetService + Sync + Send>,
     pub asset_converter: AssetDtoConverter,
 }
 
-pub async fn init_app_state() -> AppState {
-    let cfg = Settings::default().unwrap();
-    create_app_state(cfg).await
-}
+impl AppState {
+    pub async fn create_app_state(cfg: &Settings) -> AppState {
+        let l2_storage = {
+            let DatabaseCfg { connection_url, min_connections, max_connections } = &cfg.database;
+            let storage = L2StoragePg::new_from_url(connection_url, *min_connections, *max_connections)
+                .await
+                .unwrap_or_else(|e| panic!("Failed to init 'L2Storage' cause: {e}"));
+            Arc::new(storage)
+        };
 
-pub async fn create_app_state(cfg: Settings) -> AppState {
-    let l2_storage = {
-        let DatabaseCfg { connection_url, min_connections, max_connections } = &cfg.database;
-        let storage = L2StoragePg::new_from_url(connection_url, *min_connections, *max_connections)
-            .await
-            .unwrap();
-        Arc::new(storage)
-    };
+        let obj_storage = {
+            let s3_client = cfg.obj_storage.s3_client().await;
+            let storage = S3Storage::new(
+                &cfg.obj_storage.bucket_for_json_metadata,
+                &cfg.obj_storage.bucket_for_binary_assets,
+                Arc::new(s3_client),
+            )
+            .await;
+            Arc::new(storage)
+        };
 
-    let obj_storage = {
-        let s3_client = cfg.obj_storage.s3_client().await;
-        let storage = S3Storage::new(
-            &cfg.obj_storage.bucket_for_json_metadata,
-            &cfg.obj_storage.bucket_for_binary_assets,
-            Arc::new(s3_client),
-        )
-        .await;
-        Arc::new(storage)
-    };
+        let solana_service = Arc::new(SolanaService::new(&cfg.solana.url));
 
-    let solana_service = Arc::new(SolanaService::new(&cfg.solana.url));
+        let hd_wallet_producer = HdWalletProducer::from_seed(cfg.master_key_seed());
 
-    let hd_wallet_producer = HdWalletProducer::from_seed(cfg.master_key_seed());
+        let asset_service = Arc::new(AssetServiceImpl {
+            wallet_producer: hd_wallet_producer,
+            derivation_sequence: l2_storage.clone(),
+            l2_storage,
+            asset_metadata_storage: obj_storage.clone(),
+            blob_storage: obj_storage.clone(),
+            l1_service: solana_service,
+            metadata_server_base_url: cfg.rest_server.base_url.clone(),
+        });
 
-    let asset_service = Arc::new(AssetServiceImpl {
-        wallet_producer: hd_wallet_producer,
-        derivation_sequence: l2_storage.clone(),
-        l2_storage,
-        asset_metadata_storage: obj_storage.clone(),
-        blob_storage: obj_storage.clone(),
-        s1_service: solana_service,
-        metadata_server_base_url: cfg.rest_server.base_url.clone(),
-    });
+        let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url.clone() };
 
-    let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url };
+        AppState { asset_service, asset_converter }
+    }
 
-    AppState { asset_service, asset_converter }
+    pub fn make_endpoints(&self, cfg: &Settings) -> impl FnOnce(&mut ServiceConfig) + '_ {
+        let api_keys_provider_ctx = ApiKeysProviderCtx { api_keys: cfg.rest_api_keys() };
+        let app_state = self.clone();
+
+        |serv_cfg: &mut ServiceConfig| {
+            serv_cfg
+                .app_data(Data::new(api_keys_provider_ctx))
+                .app_data(Data::new(app_state))
+                .service(health)
+                .service(create_asset)
+                .service(update_asset)
+                .service(get_asset)
+                .service(get_metadata)
+                .service(mint_transaction)
+                .service(secured_health);
+        }
+    }
 }

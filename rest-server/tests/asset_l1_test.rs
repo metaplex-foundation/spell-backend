@@ -4,17 +4,18 @@ mod test_app_util;
 #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
-    use actix_http::StatusCode;
-    use actix_web::{body::MessageBody, test};
     use mpl_core::instructions::CreateV1Builder;
+    use reqwest::Client as ReqWestClient;
+    use reqwest::StatusCode;
     use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
     use setup::TestEnvironmentCfg;
     use solana_client::nonblocking::rpc_client::RpcClient;
     use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
     use std::{str::FromStr, time::Duration};
-    use test_app_util::extract_asset_from_response;
+    use test_app_util::{extract_asset_from_reqwest_response, extract_string_from_reqwest_response};
+    use util::str_util::form_url;
 
-    #[tokio::test]
+    #[actix_web::test]
     #[serial_test::serial]
     async fn test_l1() {
         // Prepare environment
@@ -26,9 +27,10 @@ mod test {
             .await;
         let test_cfg = t_env.make_test_cfg().await;
 
-        let app = test_app_util::init_web_app(&t_env).await;
+        test_app_util::init_app_as_web_server(&t_env).await;
 
         let solana_client = RpcClient::new_with_timeout(t_env.solana_url(), Duration::from_secs(1));
+        let reqwest_client = ReqWestClient::new();
         await_solana_to_startup(&solana_client).await;
 
         let client_kp = Keypair::new();
@@ -64,18 +66,20 @@ mod test {
                 owner: bs58::encode(client_kp.pubkey()).into_string(),
                 creator: bs58::encode(creator_kp.pubkey()).into_string(),
                 authority: bs58::encode(authority_kp.pubkey()).into_string(),
+                royalty_basis_points: 500,
                 collection: None,
             };
 
-            let req = test::TestRequest::post()
-                .uri("/asset")
-                .append_header(("x-api-key", "111"))
-                .set_json(req_payload)
-                .to_request();
-
-            let serv_resp = test::call_service(&app, req).await;
-            assert_eq!(serv_resp.status(), StatusCode::CREATED);
-            extract_asset_from_response(serv_resp)
+            let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset");
+            let serv_resp = reqwest_client
+                .post(url)
+                .header("x-api-key", "111")
+                .json(&req_payload)
+                .send()
+                .await
+                .unwrap_or_else(|e| panic!("Failed to sent request: {e}"));
+            assert!(serv_resp.status().eq(&StatusCode::CREATED));
+            extract_asset_from_reqwest_response(serv_resp).await
         };
 
         // Transaction created on client side
@@ -108,18 +112,17 @@ mod test {
         let mut create_asset_tx = Transaction::new_with_payer(&[create_asset_ix], Some(&client_kp.pubkey()));
         create_asset_tx.partial_sign(&signers, last_blockhash);
 
-        // Calling L1 mint endpoint
-        let req = test::TestRequest::post()
-            .uri("/asset/mint")
-            .append_header(("x-api-key", "111"))
-            .set_json(create_asset_tx)
-            .to_request();
-
-        let serv_resp = test::call_service(&app, req).await;
-        let code = serv_resp.status();
-        let resp_text = String::from_utf8(serv_resp.into_body().try_into_bytes().unwrap().to_vec()).unwrap();
+        let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint");
+        let serv_resp = reqwest_client
+            .post(url)
+            .header("x-api-key", "111")
+            .json(&create_asset_tx)
+            .send()
+            .await
+            .unwrap_or_else(|e| panic!("Failed to sent request: {e}"));
+        assert!(serv_resp.status().eq(&StatusCode::OK));
+        let resp_text = extract_string_from_reqwest_response(serv_resp).await;
         println!("RESP: {resp_text}");
-        assert_eq!(code, StatusCode::OK);
     }
 
     /// Helps to wait for an async functionality to startup.

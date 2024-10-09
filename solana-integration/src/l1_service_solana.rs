@@ -1,12 +1,13 @@
-use std::sync::Arc;
-
+use anyhow::Context;
 use interfaces::l1_service::{L1MintTransactionError, L1Service, ParsedMintIxInfo};
+use std::sync::Arc;
 
 use mpl_core::instructions::CreateV1InstructionArgs;
 use solana_client::nonblocking::rpc_client::{self, RpcClient};
 use solana_sdk::signature::Signature;
 use solana_sdk::signer::keypair::Keypair;
 use solana_sdk::transaction::Transaction;
+use tracing::{error, info};
 
 pub struct SolanaService {
     client: Arc<RpcClient>,
@@ -30,10 +31,26 @@ impl L1Service for SolanaService {
         asset_keypair: &Keypair,
     ) -> anyhow::Result<Signature> {
         tx.try_sign(&[asset_keypair], tx.message.recent_blockhash)?;
+        Ok(self.client.send_transaction(&tx).await?)
+    }
 
-        let tx_singnature = self.client.send_and_confirm_transaction(&tx).await?;
-
-        Ok(tx_singnature)
+    async fn is_asset_minted(&self, tx_signature: &Signature) -> anyhow::Result<bool> {
+        match self
+            .client
+            .get_signature_status(tx_signature)
+            .await
+            .context("Failed to send RPC call!")?
+            .context("Corresponding transaction is being processed!")?
+        {
+            Ok(_) => {
+                info!("Mint for '{tx_signature}' is successful.");
+                Ok(true)
+            }
+            Err(e) => {
+                error!("Mint for '{tx_signature}' has failed because: {e}!");
+                Ok(false)
+            }
+        }
     }
 }
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use actix_web::{
     body::BoxBody,
     get,
@@ -76,7 +74,7 @@ pub struct L2AssetInfoResponse {
 pub async fn create_asset(
     _: ApiKeyExtractor,
     req: web::Json<CreateAssetRequest>,
-    state: web::Data<Arc<AppState>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
     let Some(owner) = PublicKey::from_bs58(&req.owner) else {
         return bad_request("owner contains malformed public key");
@@ -121,7 +119,7 @@ pub async fn update_asset(
     _: ApiKeyExtractor,
     asset_pubkey: web::Path<String>,
     req: web::Json<UpdateAssetRequest>,
-    state: web::Data<Arc<AppState>>,
+    state: web::Data<AppState>,
 ) -> impl Responder {
     let Some(pubkey) = PublicKey::from_bs58(&asset_pubkey) else {
         return bad_request("Invalid asset public key");
@@ -176,7 +174,7 @@ pub async fn update_asset(
 }
 
 #[get("/asset/{pubkey}")]
-pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let Some(pubkey) = PublicKey::from_bs58(&asset_pubkey) else {
         return bad_request("Invalid asset public key");
     };
@@ -196,7 +194,7 @@ pub async fn get_asset(asset_pubkey: web::Path<String>, state: web::Data<Arc<App
 }
 
 #[get("/asset/{pubkey}/metadata.json")]
-pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let Some(pubkey) = PublicKey::from_bs58(&asset_pubkey) else {
         return bad_request("Invalid asset public key");
     };
@@ -214,7 +212,7 @@ pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<Arc<
 /// and partially signed on the client side.
 /// The transaction is verified, signed on by the asset keypair and sent to Solana.
 #[post("/asset/mint")]
-pub async fn mint_transaction(req: web::Json<Transaction>, state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn mint_transaction(req: web::Json<Transaction>, state: web::Data<AppState>) -> impl Responder {
     match state.asset_service.execute_asset_l1_mint(req.0).await {
         Ok(()) => HttpResponse::new(StatusCode::OK),
         Err(e) => {

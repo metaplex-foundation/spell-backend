@@ -4,6 +4,7 @@ use actix_http::Request;
 use actix_web::dev::ServiceResponse;
 use actix_web::{test, App, HttpServer};
 use entities::dto::Asset;
+use rest_server::rest::endpoints::l2_assets::MintStatusResponse;
 use rest_server::rest::web_app::AppState;
 use setup::TestEnvironment;
 use std::str::FromStr;
@@ -75,4 +76,8 @@ pub async fn extract_asset_from_reqwest_response(serv_resp: reqwest::Response) -
 
 pub async fn extract_string_from_reqwest_response(serv_resp: reqwest::Response) -> String {
     serv_resp.text().await.unwrap()
+}
+
+pub async fn extract_mint_status_response_from_reqwest_response(serv_resp: reqwest::Response) -> MintStatusResponse {
+    serv_resp.json::<MintStatusResponse>().await.unwrap()
 }

@@ -10,9 +10,9 @@ use storage::l2_storage_pg::L2StoragePg;
 async fn test_save_fetch() {
     let test_env = TestEnvironment::builder().with_pg().start().await;
 
-    let url = test_env.l2_storage_pg_url().await;
+    let db_config = test_env.database_cfg().await;
 
-    let storage = L2StoragePg::new_from_url(&url, 1, 1).await.unwrap();
+    let storage = L2StoragePg::new_from_cfg(&db_config).await.unwrap();
 
     let asset = L2Asset {
         pubkey: rand_pubkey(),
@@ -39,9 +39,9 @@ async fn test_save_fetch() {
 async fn test_bip44_sequences() {
     let test_env = TestEnvironment::builder().with_pg().start().await;
 
-    let url = test_env.l2_storage_pg_url().await;
+    let db_config = test_env.database_cfg().await;
 
-    let sut: &dyn Bip44DerivationSequence = &L2StoragePg::new_from_url(&url, 1, 1).await.unwrap();
+    let sut: &dyn Bip44DerivationSequence = &L2StoragePg::new_from_cfg(&db_config).await.unwrap();
 
     assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 1 });
     assert_eq!(sut.next_account_and_address().await.unwrap(), DerivationValues { account: 0, address: 2 });

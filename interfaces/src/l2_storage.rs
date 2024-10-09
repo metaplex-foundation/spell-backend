@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use entities::dto::AssetMintStatus;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 
 /// Storage interfaces for L2 assets managing
@@ -30,6 +31,10 @@ pub trait L2Storage {
     async fn add_l1_asset(&self, pubkey: &PublicKey, tx_signature: &[u8]) -> anyhow::Result<()>;
     async fn finalize_mint(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
     async fn mint_didnt_happen(&self, pubkey: &PublicKey) -> anyhow::Result<()>;
+    async fn get_mint_status_and_signature(
+        &self,
+        pubkey: &PublicKey,
+    ) -> anyhow::Result<(AssetMintStatus, Option<Vec<u8>>)>;
 }
 
 #[derive(Debug, PartialEq)]

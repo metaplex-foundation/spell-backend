@@ -99,6 +99,7 @@ pub struct DatabaseCfg {
     pub connection_url: String,
     pub min_connections: u32,
     pub max_connections: u32,
+    pub log_level: String,
 }
 
 impl fmt::Debug for DatabaseCfg {
@@ -107,6 +108,7 @@ impl fmt::Debug for DatabaseCfg {
             .field("connection_url", &mask_url_passwd(&self.connection_url))
             .field("min_connections", &self.min_connections)
             .field("max_connections", &self.max_connections)
+            .field("log_level", &self.log_level)
             .finish()
     }
 }

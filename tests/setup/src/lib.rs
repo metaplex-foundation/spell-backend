@@ -86,8 +86,9 @@ impl TestEnvironment {
     pub async fn database_cfg(&self) -> DatabaseCfg {
         DatabaseCfg {
             connection_url: self.l2_storage_pg_url().await,
-            min_connections: 1,
-            max_connections: 1,
+            min_connections: 5,
+            max_connections: 10,
+            log_level: "DEBUG".to_string(),
         }
     }
 

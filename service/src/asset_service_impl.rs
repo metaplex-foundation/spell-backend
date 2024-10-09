@@ -1,5 +1,6 @@
 use crate::converter::get_metadata_uri_for_key;
 use chrono::Utc;
+use entities::dto::AssetMintStatus;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
     asset_service::{AssetService, L1MintError, L2AssetInfo},
@@ -230,6 +231,13 @@ impl AssetService for AssetServiceImpl {
         ));
 
         Ok(())
+    }
+
+    async fn get_mint_status(&self, public_key: PublicKey) -> anyhow::Result<(AssetMintStatus, Option<Signature>)> {
+        self.l2_storage
+            .get_mint_status_and_signature(&public_key)
+            .await
+            .map(|(status, signature)| (status, signature.and_then(Self::parse_signature)))
     }
 }
 

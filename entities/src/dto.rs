@@ -27,6 +27,14 @@ impl AssetExtended {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
+pub enum AssetMintStatus {
+    L2,
+    Minting,
+    #[allow(non_camel_case_types)]
+    L1_SOLANA,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Quality {
     #[serde(rename = "$$schema")]

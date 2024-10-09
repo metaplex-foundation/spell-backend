@@ -1,16 +1,18 @@
 use anyhow::Context;
+use entities::dto::AssetMintStatus as EntityAssetMintStatus;
 use entities::l2::{AssetSortBy, AssetSortDirection, AssetSorting, L2Asset, PublicKey};
 use interfaces::l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgRow},
     query, ConnectOptions, PgExecutor, PgPool, Postgres, QueryBuilder, Row,
 };
-use std::fmt::Display;
+use std::str::FromStr;
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 use tracing::log::LevelFilter;
 use tracing::{error, info};
 use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
+use util::config::DatabaseCfg;
 
 pub struct L2StoragePg {
     pub pool: PgPool,
@@ -190,7 +192,7 @@ impl L2Storage for L2StoragePg {
         .fetch_one(&self.pool)
         .await
         .ok()
-        .and_then(Self::try_get_signature_from_row)
+        .and_then(Self::signature_from_row)
     }
 
     async fn add_l1_asset(&self, asset_pubkey: &PublicKey, tx_signature: &[u8]) -> anyhow::Result<()> {
@@ -233,20 +235,66 @@ impl L2Storage for L2StoragePg {
 
         Ok(())
     }
+
+    async fn get_mint_status_and_signature(
+        &self,
+        pubkey: &PublicKey,
+    ) -> anyhow::Result<(EntityAssetMintStatus, Option<Vec<u8>>)> {
+        let mut tx = self.pool.begin().await?;
+
+        let status = QueryBuilder::new(
+            r#"
+            SELECT
+                current_state
+            FROM l2_assets_v1
+            WHERE asset_pubkey =
+        "#,
+        )
+        .push_bind(pubkey)
+        .build()
+        .fetch_one(&mut tx)
+        .await?;
+
+        let status = Self::status_from_row(status)?.into();
+
+        if let EntityAssetMintStatus::L2 = status {
+            return Ok((status, None));
+        }
+
+        let signature = QueryBuilder::new(
+            r#"
+            SELECT
+                signature
+            FROM asset_minting_status
+            WHERE asset_pubkey =
+        "#,
+        )
+        .push_bind(pubkey)
+        .build()
+        .fetch_one(&mut tx)
+        .await
+        .map(Self::signature_from_row)?;
+
+        Ok((status, signature))
+    }
 }
 
 impl L2StoragePg {
     const LOGGING_INTERVAL_FOR_POOL_STATUS_IN_TESTS: Duration = Duration::from_secs(5);
 
-    pub async fn new_from_url(url: &str, min_connections: u32, max_connections: u32) -> anyhow::Result<L2StoragePg> {
-        let mut options = url.parse::<PgConnectOptions>()?;
-        options.log_statements(LevelFilter::Off);
-        options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
+    pub async fn new_from_cfg(cfg: &DatabaseCfg) -> anyhow::Result<L2StoragePg> {
+        let Ok(log_level_filter) = LevelFilter::from_str(&cfg.log_level) else {
+            anyhow::bail!("Invalid log level for 'L2StoragePg'.")
+        };
+
+        let mut options = cfg.connection_url.parse::<PgConnectOptions>()?;
+        options.log_statements(log_level_filter);
+        options.log_slow_statements(log_level_filter, Duration::from_secs(100));
         options = options.extra_float_digits(None); // needed for Pgbouncer
 
         let pool = PgPoolOptions::new()
-            .min_connections(min_connections)
-            .max_connections(max_connections)
+            .min_connections(cfg.min_connections)
+            .max_connections(cfg.max_connections)
             .connect_with(options)
             .await?;
 
@@ -480,39 +528,56 @@ impl L2StoragePg {
         Ok(())
     }
 
-    fn log_from_row_err(row_name: &str, err: impl Display) {
-        error!("FromRowError for: '{row_name}'. Cause: {err}")
+    fn status_from_row(row: PgRow) -> anyhow::Result<AssetMintStatus> {
+        Self::try_get_from_row::<AssetMintStatus>(&row, "current_state")
     }
 
-    fn try_get_signature_from_row(row: PgRow) -> Option<Vec<u8>> {
-        row.try_get("signature")
-            .inspect_err(|e| Self::log_from_row_err("signature", e))
-            .ok()
+    fn signature_from_row(row: PgRow) -> Option<Vec<u8>> {
+        Self::try_get_from_row(&row, "signature").ok()
     }
 
     fn asset_from_row(row: PgRow) -> anyhow::Result<L2Asset> {
         Ok(L2Asset {
-            pubkey: Self::try_get_asset_from_row(&row, "asset_pubkey")?,
-            name: Self::try_get_asset_from_row(&row, "asset_name")?,
-            owner: Self::try_get_asset_from_row(&row, "asset_owner")?,
-            creator: Self::try_get_asset_from_row(&row, "asset_creator")?,
-            collection: Self::try_get_asset_from_row(&row, "asset_collection")?,
-            authority: Self::try_get_asset_from_row(&row, "asset_authority")?,
-            royalty_basis_points: Self::try_get_asset_from_row::<i16>(&row, "royalty_basis_points")? as u16,
-            create_timestamp: Self::try_get_asset_from_row(&row, "asset_create_timestamp")?,
-            update_timestamp: Self::try_get_asset_from_row(&row, "asset_last_update_timestamp")?,
-            bip44_account_num: Self::try_get_asset_from_row::<i64>(&row, "bip44_account_num")? as u32,
-            bip44_address_num: Self::try_get_asset_from_row::<i64>(&row, "bip44_address_num")? as u32,
+            pubkey: Self::try_get_from_row(&row, "asset_pubkey")?,
+            name: Self::try_get_from_row(&row, "asset_name")?,
+            owner: Self::try_get_from_row(&row, "asset_owner")?,
+            creator: Self::try_get_from_row(&row, "asset_creator")?,
+            collection: Self::try_get_from_row(&row, "asset_collection")?,
+            authority: Self::try_get_from_row(&row, "asset_authority")?,
+            royalty_basis_points: Self::try_get_from_row::<i16>(&row, "royalty_basis_points")? as u16,
+            create_timestamp: Self::try_get_from_row(&row, "asset_create_timestamp")?,
+            update_timestamp: Self::try_get_from_row(&row, "asset_last_update_timestamp")?,
+            bip44_account_num: Self::try_get_from_row::<i64>(&row, "bip44_account_num")? as u32,
+            bip44_address_num: Self::try_get_from_row::<i64>(&row, "bip44_address_num")? as u32,
         })
     }
 
-    fn try_get_asset_from_row<'a, T>(row: &'a PgRow, index: &str) -> anyhow::Result<T>
+    fn try_get_from_row<'a, T>(row: &'a PgRow, index: &str) -> anyhow::Result<T>
     where
         T: sqlx::Decode<'a, Postgres> + sqlx::Type<Postgres>,
     {
         row.try_get::<'a, T, _>(index)
-            .inspect_err(|e| Self::log_from_row_err(index, e))
+            .inspect_err(|e| error!("FromRowError for: '{index}'. Cause: {e}"))
             .context("FromRowError")
+    }
+}
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "asset_state", rename_all = "UPPERCASE")]
+enum AssetMintStatus {
+    L2,
+    Minting,
+    #[allow(non_camel_case_types)]
+    L1_SOLANA,
+}
+
+impl Into<EntityAssetMintStatus> for AssetMintStatus {
+    fn into(self) -> EntityAssetMintStatus {
+        match self {
+            Self::L2 => EntityAssetMintStatus::L2,
+            Self::Minting => EntityAssetMintStatus::Minting,
+            Self::L1_SOLANA => EntityAssetMintStatus::L1_SOLANA,
+        }
     }
 }
 

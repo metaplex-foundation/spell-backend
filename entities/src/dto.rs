@@ -29,8 +29,11 @@ impl AssetExtended {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
 pub enum AssetMintStatus {
+    #[serde(rename = "created")]
     L2,
+    #[serde(rename = "created")]
     Minting,
+    #[serde(rename = "created")]
     #[allow(non_camel_case_types)]
     L1_SOLANA,
 }

@@ -87,7 +87,7 @@ impl L2Storage for L2StoragePg {
                     bip44_account_num,
                     bip44_address_num
                 FROM l2_assets_v1
-                WHERE current_state = 'L2' AND asset_pubkey = 
+                WHERE current_state != 'L1_SOLANA' AND asset_pubkey =
             "#,
         );
 
@@ -118,7 +118,7 @@ impl L2Storage for L2StoragePg {
                     bip44_account_num,
                     bip44_address_num
                 FROM l2_assets_v1
-                WHERE asset_pubkey IN(
+                WHERE current_state != 'L1_SOLANA' AND asset_pubkey IN(
             "#,
         );
 
@@ -179,20 +179,7 @@ impl L2Storage for L2StoragePg {
     }
 
     async fn find_l1_asset_signature(&self, asset_pubkey: &PublicKey) -> Option<Vec<u8>> {
-        QueryBuilder::new(
-            r#"
-            SELECT
-                signature
-            FROM asset_minting_status
-            WHERE asset_pubkey = 
-        "#,
-        )
-        .push_bind(asset_pubkey)
-        .build()
-        .fetch_one(&self.pool)
-        .await
-        .ok()
-        .and_then(Self::signature_from_row)
+        Self::find_l1_asset_signature(asset_pubkey, &self.pool).await
     }
 
     async fn add_l1_asset(&self, asset_pubkey: &PublicKey, tx_signature: &[u8]) -> anyhow::Result<()> {
@@ -214,22 +201,22 @@ impl L2Storage for L2StoragePg {
         Ok(())
     }
 
-    async fn finalize_mint(&self, pubkey: &PublicKey) -> anyhow::Result<()> {
+    async fn finalize_mint(&self, asset_pubkey: &PublicKey) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        Self::finalize_mint_of_l2_asset(pubkey, &mut tx).await?;
-        Self::finalize_mint_of_asset_minting_status(pubkey, &mut tx).await?;
+        Self::finalize_mint_of_l2_asset(asset_pubkey, &mut tx).await?;
+        Self::finalize_mint_of_asset_minting_status(asset_pubkey, &mut tx).await?;
 
         tx.commit().await?;
 
         Ok(())
     }
 
-    async fn mint_didnt_happen(&self, pubkey: &PublicKey) -> anyhow::Result<()> {
+    async fn mint_didnt_happen(&self, asset_pubkey: &PublicKey) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        Self::cancel_l2_minting(pubkey, &mut tx).await?;
-        Self::cancel_l1_minting(pubkey, &mut tx).await?;
+        Self::cancel_l2_minting(asset_pubkey, &mut tx).await?;
+        Self::cancel_l1_minting(asset_pubkey, &mut tx).await?;
 
         tx.commit().await?;
 
@@ -238,42 +225,17 @@ impl L2Storage for L2StoragePg {
 
     async fn get_mint_status_and_signature(
         &self,
-        pubkey: &PublicKey,
+        asset_pubkey: &PublicKey,
     ) -> anyhow::Result<(EntityAssetMintStatus, Option<Vec<u8>>)> {
         let mut tx = self.pool.begin().await?;
 
-        let status = QueryBuilder::new(
-            r#"
-            SELECT
-                current_state
-            FROM l2_assets_v1
-            WHERE asset_pubkey =
-        "#,
-        )
-        .push_bind(pubkey)
-        .build()
-        .fetch_one(&mut tx)
-        .await?;
-
-        let status = Self::status_from_row(status)?.into();
+        let status = Self::get_asset_mint_status(asset_pubkey, &mut tx).await?.into();
 
         if let EntityAssetMintStatus::L2 = status {
             return Ok((status, None));
         }
 
-        let signature = QueryBuilder::new(
-            r#"
-            SELECT
-                signature
-            FROM asset_minting_status
-            WHERE asset_pubkey =
-        "#,
-        )
-        .push_bind(pubkey)
-        .build()
-        .fetch_one(&mut tx)
-        .await
-        .map(Self::signature_from_row)?;
+        let signature = Self::find_l1_asset_signature(asset_pubkey, &mut tx).await;
 
         Ok((status, signature))
     }
@@ -388,6 +350,43 @@ impl L2StoragePg {
         Ok(())
     }
 
+    async fn find_l1_asset_signature(asset_pubkey: &PublicKey, executor: impl PgExecutor<'_>) -> Option<Vec<u8>> {
+        QueryBuilder::new(
+            r#"
+            SELECT
+                signature
+            FROM asset_minting_status
+            WHERE asset_pubkey = 
+        "#,
+        )
+        .push_bind(asset_pubkey)
+        .build()
+        .fetch_one(executor)
+        .await
+        .ok()
+        .and_then(Self::signature_from_row)
+    }
+
+    async fn get_asset_mint_status(
+        asset_pubkey: &PublicKey,
+        executor: impl PgExecutor<'_>,
+    ) -> anyhow::Result<AssetMintStatus> {
+        let state_row = QueryBuilder::new(
+            r#"
+            SELECT
+                current_state
+            FROM l2_assets_v1
+            WHERE asset_pubkey =
+        "#,
+        )
+        .push_bind(asset_pubkey)
+        .build()
+        .fetch_one(executor)
+        .await?;
+
+        Self::status_from_row(state_row)
+    }
+
     async fn find_by(
         &self,
         column_name: &str,
@@ -412,7 +411,7 @@ impl L2StoragePg {
                     bip44_account_num,
                     bip44_address_num
                 FROM l2_assets_v1
-                WHERE
+                WHERE current_state != 'L1_SOLANA' AND
             "#,
         );
 

@@ -23,11 +23,11 @@ CREATE TABLE IF NOT EXISTS l2_assets_v1 (
     CONSTRAINT pk_asset_pubkey PRIMARY KEY (asset_pubkey)
 );
 
-CREATE INDEX idx_asset_owner_create_timestamp ON l2_assets_v1(asset_owner, asset_create_timestamp);
-CREATE INDEX idx_asset_owner_update_timestamp ON l2_assets_v1(asset_owner, asset_last_update_timestamp);
+CREATE INDEX idx_asset_owner_create_timestamp ON l2_assets_v1(asset_owner, asset_create_timestamp) WHERE (current_state != 'L1_SOLANA');
+CREATE INDEX idx_asset_owner_update_timestamp ON l2_assets_v1(asset_owner, asset_last_update_timestamp) WHERE (current_state != 'L1_SOLANA');
 
-CREATE INDEX idx_asset_creator_create_timestamp ON l2_assets_v1(asset_creator, asset_create_timestamp);
-CREATE INDEX idx_asset_creator_update_timestamp ON l2_assets_v1(asset_creator, asset_last_update_timestamp);
+CREATE INDEX idx_asset_creator_create_timestamp ON l2_assets_v1(asset_creator, asset_create_timestamp) WHERE (current_state != 'L1_SOLANA');
+CREATE INDEX idx_asset_creator_update_timestamp ON l2_assets_v1(asset_creator, asset_last_update_timestamp) WHERE (current_state != 'L1_SOLANA');
 
 -- Used to track numbers of HD wallets
 -- solana_sdk::derivation_path::DerivationPath::new_bip44 talkes u32 arguments

@@ -29,11 +29,11 @@ impl AssetExtended {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
 pub enum AssetMintStatus {
-    #[serde(rename = "created")]
+    #[serde(rename = "l2")]
     L2,
-    #[serde(rename = "created")]
+    #[serde(rename = "minting")]
     Minting,
-    #[serde(rename = "created")]
+    #[serde(rename = "l1_solana")]
     #[allow(non_camel_case_types)]
     L1_SOLANA,
 }

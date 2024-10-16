@@ -29,9 +29,14 @@ impl L1Service for SolanaService {
         &self,
         mut tx: Transaction,
         asset_keypair: &Keypair,
+        exec_sync: bool,
     ) -> anyhow::Result<Signature> {
         tx.try_sign(&[asset_keypair], tx.message.recent_blockhash)?;
-        Ok(self.client.send_transaction(&tx).await?)
+        if exec_sync {
+            Ok(self.client.send_and_confirm_transaction(&tx).await?)
+        } else {
+            Ok(self.client.send_transaction(&tx).await?)
+        }
     }
 
     async fn is_asset_minted(&self, tx_signature: &Signature) -> anyhow::Result<bool> {

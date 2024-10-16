@@ -179,7 +179,7 @@ impl AssetService for AssetServiceImpl {
             .collect())
     }
 
-    async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()> {
+    async fn execute_asset_l1_mint(&self, tx: Transaction, exec_sync: bool) -> anyhow::Result<()> {
         let mint_ix = self.l1_service.parse_mint_transaction(&tx)?;
         let asset_pubkey = mint_ix.asset_pubkey;
 
@@ -204,7 +204,7 @@ impl AssetService for AssetServiceImpl {
             .wallet_producer
             .make_hd_wallet(l2_asset.bip44_account_num, l2_asset.bip44_address_num);
 
-        let tx_signature = match self.l1_service.execute_mint_transaction(tx, &asset_kp).await {
+        let tx_signature = match self.l1_service.execute_mint_transaction(tx, &asset_kp, exec_sync).await {
             Ok(signature) => {
                 info!(
                     "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent!",
@@ -218,16 +218,18 @@ impl AssetService for AssetServiceImpl {
             }
         };
 
-        self.l2_storage
-            .add_l1_asset(&asset_pubkey, &tx_signature.as_ref())
-            .await?;
+        if !exec_sync {
+            self.l2_storage
+                .add_l1_asset(&asset_pubkey, &tx_signature.as_ref())
+                .await?;
 
-        Self::in_background(Self::await_for_mint_status_and_save_it(
-            tx_signature,
-            asset_pubkey,
-            self.l1_service.clone(),
-            self.l2_storage.clone(),
-        ));
+            Self::in_background(Self::await_for_mint_status_and_save_it(
+                tx_signature,
+                asset_pubkey,
+                self.l1_service.clone(),
+                self.l2_storage.clone(),
+            ));
+        }
 
         Ok(())
     }

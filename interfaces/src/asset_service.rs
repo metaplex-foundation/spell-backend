@@ -97,7 +97,7 @@ pub trait AssetService {
     ) -> anyhow::Result<Vec<L2AssetInfo>>;
 
     /// Execute asset L1 mint transaction received from the client.
-    async fn execute_asset_l1_mint(&self, tx: Transaction) -> anyhow::Result<()>;
+    async fn execute_asset_l1_mint(&self, tx: Transaction, exec_sync: bool) -> anyhow::Result<()>;
 }
 
 #[derive(Error, Debug)]

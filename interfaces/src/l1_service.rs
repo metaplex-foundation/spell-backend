@@ -35,7 +35,13 @@ pub trait L1Service {
     ///    i.e. asset ID is a pubkey of this keypair.
     ///    (We use bip44 to derive this keypair from our master keypair,
     ///    when we initially an L2 asset)
-    async fn execute_mint_transaction(&self, tx: Transaction, asset_keypair: &Keypair) -> anyhow::Result<Signature>;
+    /// * `exec_sync` - whether we want to wait for the transaction to confirm (can take up to 2 mins of mainnet)
+    async fn execute_mint_transaction(
+        &self,
+        tx: Transaction,
+        asset_keypair: &Keypair,
+        exec_sync: bool,
+    ) -> anyhow::Result<Signature>;
 
     /// Sends a request to Solana to retrieve the transaction processing status.
     ///

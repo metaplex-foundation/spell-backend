@@ -19,6 +19,8 @@ use crate::{
 };
 use actix_web::web::{Data, ServiceConfig};
 
+use super::endpoints::l2_assets::mint_transaction_async;
+
 pub async fn start_up_rest_server(cfg: &Settings) -> Result<()> {
     info!("Starting server");
 
@@ -97,6 +99,7 @@ impl AppState {
                 .service(get_metadata)
                 .service(mint_transaction)
                 .service(mint_status)
+                .service(mint_transaction_async)
                 .service(secured_health);
         }
     }

@@ -13,10 +13,9 @@ use interfaces::{
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
-use solana_sdk::transaction::Transaction;
 use util::publickey::PublicKeyExt;
 
-use crate::{rest::auth::ApiKeyExtractor, rest::web_app::AppState};
+use crate::rest::{auth::ApiKeyExtractor, marshalling, web_app::AppState};
 
 const ASSET_NOT_FOUND: &str = "No asset found with given ID";
 const ROYALTY_BASIS_POINTS_MAX_VALUE: u16 = 10_000;
@@ -68,6 +67,13 @@ pub struct L2AssetInfoResponse {
     pub authority: String,
     pub create_timestamp: String,
     pub medata_json: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct L1MintRequest {
+    /// BASE64 encoded bincode serialized solana transaction
+    pub tx: String,
+    pub callback: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -219,8 +225,35 @@ pub async fn get_metadata(asset_pubkey: web::Path<String>, state: web::Data<AppS
 /// and partially signed on the client side.
 /// The transaction is verified, signed on by the asset keypair and sent to Solana.
 #[post("/asset/mint")]
-pub async fn mint_transaction(req: web::Json<Transaction>, state: web::Data<AppState>) -> impl Responder {
-    match state.asset_service.execute_asset_l1_mint(req.0).await {
+pub async fn mint_transaction(req: web::Json<L1MintRequest>, state: web::Data<AppState>) -> impl Responder {
+    let Ok(tx) = marshalling::decode_transaction(&req.0.tx) else {
+        return bad_request("Malformed transaction");
+    };
+    match state.asset_service.execute_asset_l1_mint(tx, true).await {
+        Ok(()) => HttpResponse::new(StatusCode::OK),
+        Err(e) => {
+            if let Some(e) = e.downcast_ref::<L1MintError>() {
+                bad_request(&e.to_string())
+            } else if let Some(e) = e.downcast_ref::<L2StorageError>() {
+                bad_request(&e.to_string())
+            } else if let Some(e) = e.downcast_ref::<L1MintTransactionError>() {
+                bad_request(&e.to_string())
+            } else {
+                internal_server_error(Some(&e.to_string()))
+            }
+        }
+    }
+}
+
+/// This endpoint accepts mint CreateV1 mpl-core transaction, that is fully populated
+/// and partially signed on the client side.
+/// The transaction is verified, signed on by the asset keypair and sent to Solana.
+#[post("/asset/mint-async")]
+pub async fn mint_transaction_async(req: web::Json<L1MintRequest>, state: web::Data<AppState>) -> impl Responder {
+    let Ok(tx) = marshalling::decode_transaction(&req.0.tx) else {
+        return bad_request("Malformed transaction");
+    };
+    match state.asset_service.execute_asset_l1_mint(tx, false).await {
         Ok(()) => HttpResponse::new(StatusCode::OK),
         Err(e) => {
             if let Some(e) = e.downcast_ref::<L1MintError>() {

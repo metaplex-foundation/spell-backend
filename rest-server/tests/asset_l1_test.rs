@@ -4,11 +4,15 @@ mod test_app_util;
 #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
+    use base64::prelude::BASE64_STANDARD;
+    use base64::Engine;
     use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
     use entities::dto::AssetMintStatus;
     use mpl_core::instructions::CreateV1Builder;
     use reqwest::Client as ReqWestClient;
     use reqwest::StatusCode;
+    use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
+    use rest_server::rest::endpoints::l2_assets::L1MintRequest;
     use rest_server::rest::endpoints::l2_assets::{CreateAssetRequest, MintStatusResponse};
     use setup::TestEnvironmentCfg;
     use solana_client::nonblocking::rpc_client::RpcClient;
@@ -122,11 +126,19 @@ mod test {
         let mut create_asset_tx = Transaction::new_with_payer(&[create_asset_ix], Some(&client_kp.pubkey()));
         create_asset_tx.partial_sign(&signers, last_blockhash);
 
+        let base64_bincode_tx = {
+            let bincode_serialized = bincode::serialize(&create_asset_tx).unwrap();
+            let base64_serialized = BASE64_STANDARD.encode(bincode_serialized);
+            base64_serialized
+        };
+
+        let mint_req = L1MintRequest { tx: base64_bincode_tx, callback: None };
+
         let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint");
         let serv_resp = reqwest_client
             .post(url)
             .header("x-api-key", "111")
-            .json(&create_asset_tx)
+            .json(&mint_req)
             .send()
             .await
             .unwrap_or_else(|e| panic!("Failed to sent request: {e}"));

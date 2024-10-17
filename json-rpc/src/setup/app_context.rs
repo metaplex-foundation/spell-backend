@@ -9,7 +9,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use storage::asset_storage_s3::S3Storage;
 use storage::l2_storage_pg::L2StoragePg;
-use tracing::info;
+use tracing::{error, info};
 use util::hd_wallet::HdWalletProducer;
 
 pub type ArcedAppCtx = Arc<AppCtx>;
@@ -62,18 +62,22 @@ impl AppCtx {
         let l2_storage = Arc::new(L2StoragePg::new_from_pool(connection_pool));
         let s3_storage = Arc::new(s3_storage);
 
-        Self {
-            asset_service: Arc::new(AssetServiceImpl {
-                wallet_producer,
-                derivation_sequence: l2_storage.clone(),
-                l2_storage: l2_storage.clone(),
-                asset_metadata_storage: s3_storage.clone(),
-                blob_storage: s3_storage.clone(),
-                l1_service: solana_service,
-                metadata_server_base_url: app_config.settings.rest_server.base_url.clone(),
-            }),
-            metadata_uri_base,
-        }
+        let asset_service = Arc::new(AssetServiceImpl {
+            wallet_producer,
+            derivation_sequence: l2_storage.clone(),
+            l2_storage: l2_storage.clone(),
+            asset_metadata_storage: s3_storage.clone(),
+            blob_storage: s3_storage.clone(),
+            l1_service: solana_service,
+            metadata_server_base_url: app_config.settings.rest_server.base_url.clone(),
+        });
+
+        asset_service
+            .process_minting_assets()
+            .await
+            .unwrap_or_else(|e| error!("Failed to start 'process_minting_assets'; Cause: {e}."));
+
+        Self { asset_service, metadata_uri_base }
     }
 
     async fn create_connection_pool(db_url: &str, max_size_pool: u32, min_size_pool: u32) -> PgPool {

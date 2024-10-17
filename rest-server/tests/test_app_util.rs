@@ -16,11 +16,12 @@ pub async fn init_web_app(
 ) -> impl actix_web::dev::Service<Request, Response = ServiceResponse, Error = actix_web::Error> {
     let cfg = t_env.make_test_cfg().await;
 
-    let app_state = AppState::create_app_state(&cfg).await;
     let log_level = cfg.rest_server.log_level.clone();
     let log_level = LevelFilter::from_str(&log_level).unwrap_or_else(|_| panic!("Invalid 'log_level' {log_level}"));
 
     maybe_init_logger(log_level);
+
+    let app_state = AppState::create_app_state(&cfg).await;
 
     let app = test::init_service(App::new().configure(app_state.make_endpoints(&cfg))).await;
 
@@ -30,12 +31,13 @@ pub async fn init_web_app(
 pub async fn init_app_as_web_server(t_env: &TestEnvironment) {
     let cfg = t_env.make_test_cfg().await;
 
-    let app_state = AppState::create_app_state(&cfg).await;
     let host_and_port = (cfg.rest_server.host, cfg.rest_server.port);
     let log_level = cfg.rest_server.log_level.clone();
     let log_level = LevelFilter::from_str(&log_level).unwrap_or_else(|_| panic!("Invalid 'log_level' {log_level}"));
 
     maybe_init_logger(log_level);
+
+    let app_state = AppState::create_app_state(&cfg).await;
 
     let app = HttpServer::new(move || {
         App::new()

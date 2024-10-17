@@ -6,7 +6,7 @@ use solana_integration::l1_service_solana::SolanaService;
 use std::{io, sync::Arc};
 use storage::asset_storage_s3::S3Storage;
 use storage::l2_storage_pg::L2StoragePg;
-use tracing::info;
+use tracing::{error, info};
 use tracing_actix_web::TracingLogger;
 use util::{config::Settings, hd_wallet::HdWalletProducer};
 
@@ -54,16 +54,14 @@ impl AppState {
             Arc::new(storage)
         };
 
-        let obj_storage = {
-            let s3_client = cfg.obj_storage.s3_client().await;
-            let storage = S3Storage::new(
+        let obj_storage = Arc::new(
+            S3Storage::new(
                 &cfg.obj_storage.bucket_for_json_metadata,
                 &cfg.obj_storage.bucket_for_binary_assets,
-                Arc::new(s3_client),
+                Arc::new(cfg.obj_storage.s3_client().await),
             )
-            .await;
-            Arc::new(storage)
-        };
+            .await,
+        );
 
         let solana_service = Arc::new(SolanaService::new(&cfg.solana.url));
 
@@ -78,6 +76,11 @@ impl AppState {
             l1_service: solana_service,
             metadata_server_base_url: cfg.rest_server.base_url.clone(),
         });
+
+        asset_service
+            .process_minting_assets()
+            .await
+            .unwrap_or_else(|e| error!("Failed to start 'process_minting_assets'; Cause: {e}."));
 
         let asset_converter = AssetDtoConverter { metadata_server_base_url: cfg.rest_server.base_url.clone() };
 

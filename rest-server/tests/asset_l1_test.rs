@@ -1,7 +1,7 @@
 mod test_app_util;
 
-#[cfg(not(any(skip_solana_tests)))]
-#[allow(clippy::all)]
+// #[cfg(not(any(skip_solana_tests)))]
+// #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
     use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
@@ -11,7 +11,6 @@ mod test {
     use mpl_core::instructions::CreateV1Builder;
     use reqwest::Client as ReqWestClient;
     use reqwest::StatusCode;
-    use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
     use rest_server::rest::endpoints::l2_assets::L1MintRequest;
     use rest_server::rest::endpoints::l2_assets::{CreateAssetRequest, MintStatusResponse};
     use setup::TestEnvironmentCfg;
@@ -149,6 +148,7 @@ mod test {
 
         {
             let mint_status = get_status_of_asset(&reqwest_client, &created_asset.id, &test_cfg).await;
+            dbg!(&mint_status);
             assert!(mint_status.status.eq(&AssetMintStatus::L1_SOLANA));
             assert!(mint_status.signature.is_some())
         }

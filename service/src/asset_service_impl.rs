@@ -276,6 +276,28 @@ impl AssetServiceImpl {
         Ok(())
     }
 
+    pub async fn process_minting_assets(&self) -> anyhow::Result<()> {
+        let process_in_background = |(pubkey, signature): (PublicKey, Signature)| {
+            info!("Starting mint status processing for: '{pubkey}' asset.", pubkey = pubkey.to_string());
+            Self::in_background(Self::await_for_mint_status_and_save_it(
+                signature,
+                pubkey,
+                self.l1_service.clone(),
+                self.l2_storage.clone(),
+            ))
+        };
+
+        info!("Starting mint status processing.");
+
+        Ok(self
+            .l2_storage
+            .get_pubkeys_and_signatures_of_assets_in_minting_status()
+            .await?
+            .into_iter()
+            .filter_map(|(pubkey, signature)| Self::parse_signature(signature).map(|signature| (pubkey, signature)))
+            .for_each(process_in_background))
+    }
+
     fn in_background<F>(future: F)
     where
         F: Future + Send + 'static,

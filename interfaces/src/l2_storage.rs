@@ -35,6 +35,8 @@ pub trait L2Storage {
         &self,
         pubkey: &PublicKey,
     ) -> anyhow::Result<(AssetMintStatus, Option<Vec<u8>>)>;
+    async fn get_pubkeys_and_signatures_of_assets_in_minting_status(&self)
+        -> anyhow::Result<Vec<(PublicKey, Vec<u8>)>>;
 }
 
 #[derive(Debug, PartialEq)]

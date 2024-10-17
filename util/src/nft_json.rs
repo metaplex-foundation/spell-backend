@@ -6,7 +6,8 @@ pub enum JsonMetadataError {
     NoUri,
 }
 
-/// Validates JSON metadata document
+/// Validates JSON metadata document.
+/// Validate that uri is uri.
 pub fn validate_metadata_contains_uris(_json_metadata: &str) -> std::result::Result<(), JsonMetadataError> {
     // TODO: not forget to implement
     Ok(())

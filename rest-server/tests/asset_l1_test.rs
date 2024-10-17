@@ -4,9 +4,9 @@ mod test_app_util;
 #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
+    use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
     use base64::prelude::BASE64_STANDARD;
     use base64::Engine;
-    use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
     use entities::dto::AssetMintStatus;
     use mpl_core::instructions::CreateV1Builder;
     use reqwest::Client as ReqWestClient;
@@ -94,7 +94,6 @@ mod test {
             assert!(mint_status.status.eq(&AssetMintStatus::L2));
             assert!(mint_status.signature.is_none())
         }
-
 
         // Transaction created on client side
         let asset_name = created_asset

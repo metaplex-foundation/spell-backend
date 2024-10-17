@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::Transaction;
 use thiserror::Error;
+use entities::dto::AssetMintStatus;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2AssetInfo {

@@ -21,9 +21,10 @@ bucket_for_binary_assets = "binary-assets"
 url = "https://api.devnet.solana.com"
 
 [database]
-connection_url="postgres://postgres:postgres@localhost:5432/spell-wallet"
+connection_url = "postgres://postgres:postgres@localhost:5432/spell-wallet"
 min_connections = 1
 max_connections = 20
+log_level = "OFF"
 
 [secrets]
 master_mnemonic = { Plain = "" }

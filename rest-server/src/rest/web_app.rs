@@ -8,12 +8,11 @@ use storage::asset_storage_s3::S3Storage;
 use storage::l2_storage_pg::L2StoragePg;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
-use util::{
-    config::{DatabaseCfg, Settings},
-    hd_wallet::HdWalletProducer,
-};
+use util::{config::Settings, hd_wallet::HdWalletProducer};
 
-use crate::rest::endpoints::l2_assets::{create_asset, get_asset, get_metadata, mint_transaction, update_asset};
+use crate::rest::endpoints::l2_assets::{
+    create_asset, get_asset, get_metadata, mint_status, mint_transaction, update_asset,
+};
 use crate::{
     rest::auth::ApiKeysProviderCtx,
     rest::endpoints::health_check::{health, secured_health},
@@ -49,8 +48,7 @@ pub struct AppState {
 impl AppState {
     pub async fn create_app_state(cfg: &Settings) -> AppState {
         let l2_storage = {
-            let DatabaseCfg { connection_url, min_connections, max_connections } = &cfg.database;
-            let storage = L2StoragePg::new_from_url(connection_url, *min_connections, *max_connections)
+            let storage = L2StoragePg::new_from_cfg(&cfg.database)
                 .await
                 .unwrap_or_else(|e| panic!("Failed to init 'L2Storage' cause: {e}"));
             Arc::new(storage)
@@ -100,6 +98,7 @@ impl AppState {
                 .service(get_asset)
                 .service(get_metadata)
                 .service(mint_transaction)
+                .service(mint_status)
                 .service(mint_transaction_async)
                 .service(secured_health);
         }

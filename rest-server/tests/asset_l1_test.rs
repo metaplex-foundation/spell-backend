@@ -4,18 +4,22 @@ mod test_app_util;
 #[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
+    use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
     use base64::prelude::BASE64_STANDARD;
     use base64::Engine;
+    use entities::dto::AssetMintStatus;
     use mpl_core::instructions::CreateV1Builder;
     use reqwest::Client as ReqWestClient;
     use reqwest::StatusCode;
     use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
     use rest_server::rest::endpoints::l2_assets::L1MintRequest;
+    use rest_server::rest::endpoints::l2_assets::{CreateAssetRequest, MintStatusResponse};
     use setup::TestEnvironmentCfg;
     use solana_client::nonblocking::rpc_client::RpcClient;
     use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
     use std::{str::FromStr, time::Duration};
     use test_app_util::{extract_asset_from_reqwest_response, extract_string_from_reqwest_response};
+    use util::config::Settings;
     use util::str_util::form_url;
 
     #[actix_web::test]
@@ -85,6 +89,12 @@ mod test {
             extract_asset_from_reqwest_response(serv_resp).await
         };
 
+        {
+            let mint_status = get_status_of_asset(&reqwest_client, &created_asset.id, &test_cfg).await;
+            assert!(mint_status.status.eq(&AssetMintStatus::L2));
+            assert!(mint_status.signature.is_none())
+        }
+
         // Transaction created on client side
         let asset_name = created_asset
             .content
@@ -134,6 +144,26 @@ mod test {
         assert!(serv_resp.status().eq(&StatusCode::OK));
         let resp_text = extract_string_from_reqwest_response(serv_resp).await;
         println!("RESP: {resp_text}");
+
+        tokio::time::sleep(Duration::from_secs(60)).await;
+
+        {
+            let mint_status = get_status_of_asset(&reqwest_client, &created_asset.id, &test_cfg).await;
+            assert!(mint_status.status.eq(&AssetMintStatus::L1_SOLANA));
+            assert!(mint_status.signature.is_some())
+        }
+    }
+
+    async fn get_status_of_asset(reqwest_client: &ReqWestClient, pubkey: &str, cfg: &Settings) -> MintStatusResponse {
+        let url = form_url(&cfg.rest_server.base_url, cfg.rest_server.port, &format!("asset/mint/{pubkey}",));
+
+        let server_resp = reqwest_client
+            .get(url)
+            .header("x-api-key", "111")
+            .send()
+            .await
+            .unwrap_or_else(|e| panic!("Failed to sent request: {e}"));
+        extract_mint_status_response_from_reqwest_response(server_resp).await
     }
 
     /// Helps to wait for an async functionality to startup.

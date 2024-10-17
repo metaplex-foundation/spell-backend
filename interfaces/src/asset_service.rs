@@ -1,7 +1,9 @@
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use serde::{Deserialize, Serialize};
+use solana_sdk::signature::Signature;
 use solana_sdk::transaction::Transaction;
 use thiserror::Error;
+use entities::dto::AssetMintStatus;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2AssetInfo {
@@ -97,6 +99,7 @@ pub trait AssetService {
     ) -> anyhow::Result<Vec<L2AssetInfo>>;
 
     /// Execute asset L1 mint transaction received from the client.
+    async fn get_mint_status(&self, public_key: PublicKey) -> anyhow::Result<(AssetMintStatus, Option<Signature>)>;
     async fn execute_asset_l1_mint(&self, tx: Transaction, exec_sync: bool) -> anyhow::Result<()>;
 }
 

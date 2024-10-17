@@ -78,7 +78,7 @@ impl AppState {
         });
 
         asset_service
-            .process_minting_assets()
+            .process_minting_assets_on_startup()
             .await
             .unwrap_or_else(|e| error!("Failed to start 'process_minting_assets'; Cause: {e}."));
 

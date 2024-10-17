@@ -289,13 +289,14 @@ impl AssetServiceImpl {
 
         info!("Starting mint status processing.");
 
-        Ok(self
-            .l2_storage
+        self.l2_storage
             .get_pubkeys_and_signatures_of_assets_in_minting_status()
             .await?
             .into_iter()
             .filter_map(|(pubkey, signature)| Self::parse_signature(signature).map(|signature| (pubkey, signature)))
-            .for_each(process_in_background))
+            .for_each(process_in_background);
+
+        Ok(())
     }
 
     fn in_background<F>(future: F)

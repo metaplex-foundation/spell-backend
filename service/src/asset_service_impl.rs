@@ -207,10 +207,7 @@ impl AssetService for AssetServiceImpl {
 
         let tx_signature = match self.l1_service.execute_mint_transaction(tx, &asset_kp, exec_sync).await {
             Ok(signature) => {
-                info!(
-                    "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent!",
-                    asset_pubkey = asset_pubkey.to_string()
-                );
+
                 signature
             }
             Err(e) => {

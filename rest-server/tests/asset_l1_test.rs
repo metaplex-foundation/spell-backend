@@ -1,7 +1,7 @@
 mod test_app_util;
 
-// #[cfg(not(any(skip_solana_tests)))]
-// #[allow(clippy::all)]
+#[cfg(not(any(skip_solana_tests)))]
+#[allow(clippy::all)]
 mod test {
     use crate::test_app_util;
     use crate::test_app_util::extract_mint_status_response_from_reqwest_response;
@@ -132,7 +132,7 @@ mod test {
 
         let mint_req = L1MintRequest { tx: base64_bincode_tx, callback: None };
 
-        let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint");
+        let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint-async");
         let serv_resp = reqwest_client
             .post(url)
             .header("x-api-key", "111")

@@ -10,7 +10,6 @@ use json_rpc::setup::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::setup::app_setup::AppSetup;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
-use util::publickey::PublicKeyExt;
 
 mod utils;
 
@@ -40,7 +39,7 @@ async fn get_assets_by_owner_sorting_by_created_date_desc() {
         .rev()
         .collect::<Vec<String>>();
 
-    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner.clone();
 
     let request_params = GetAssetsByOwner {
         owner_address: owner_pubkey.to_string(),
@@ -84,7 +83,7 @@ async fn get_assets_by_owner_sorting_by_created_date_asc() {
         .map(|asset| asset.asset.name.clone())
         .collect::<Vec<String>>();
 
-    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner.clone();
 
     let request_params = GetAssetsByOwner {
         owner_address: owner_pubkey.to_string(),
@@ -133,7 +132,7 @@ async fn get_assets_by_owner_with_limit_and_sorting_by_creation_date_desc() {
         .take(limit)
         .collect::<Vec<String>>();
 
-    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner;
+    let owner_pubkey = data_from_db.first().expect("Should be present.").asset.owner.clone();
 
     let request_params = GetAssetsByOwner {
         owner_address: owner_pubkey.to_string(),

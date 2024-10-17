@@ -3,7 +3,7 @@
 use entities::dto::Asset;
 use entities::l2::PublicKey;
 use interfaces::asset_service::L2AssetInfo;
-use json_rpc::endpoints::types::{AssetList, JsonRpcError};
+use json_rpc::endpoints::types::AssetList;
 use json_rpc::setup::app_context::ArcedAppCtx;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -259,9 +259,9 @@ async fn create_asset(req_params: CreateAssetRequest, ctx: ArcedAppCtx) -> Resul
         .asset_service
         .create_asset(
             &req_params.metadata_json,
-            PublicKey::from_bs58(&req_params.owner).ok_or(JsonRpcError::invalid_params("Invalid owner"))?,
-            PublicKey::from_bs58(&req_params.creator).ok_or(JsonRpcError::invalid_params("Invalid creator"))?,
-            PublicKey::from_bs58(&req_params.authority).ok_or(JsonRpcError::invalid_params("Invalid authority"))?,
+            &req_params.owner,
+            &req_params.creator,
+            &req_params.authority,
             &req_params.name,
             req_params.royalty_basis_points,
             req_params

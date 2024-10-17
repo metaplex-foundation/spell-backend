@@ -10,9 +10,10 @@ use std::str::FromStr;
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 use tracing::log::LevelFilter;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use util::base64_encode_decode::decode_timestamp_and_asset_pubkey;
 use util::config::DatabaseCfg;
+use util::publickey::PublicKeyExt;
 
 pub struct L2StoragePg {
     pub pool: PgPool,
@@ -239,6 +240,12 @@ impl L2Storage for L2StoragePg {
 
         Ok((status, signature))
     }
+
+    async fn get_pubkeys_and_signatures_of_assets_in_minting_status(
+        &self,
+    ) -> anyhow::Result<Vec<(PublicKey, Vec<u8>)>> {
+        Self::get_pubkeys_and_signatures_of_assets_in_minting_status(&self.pool).await
+    }
 }
 
 impl L2StoragePg {
@@ -385,6 +392,41 @@ impl L2StoragePg {
         .await?;
 
         Self::status_from_row(state_row)
+    }
+
+    async fn get_pubkeys_and_signatures_of_assets_in_minting_status(
+        executor: impl PgExecutor<'_>,
+    ) -> anyhow::Result<Vec<(PublicKey, Vec<u8>)>> {
+        let res = query(
+            r#"
+                    SELECT
+                        asset_pubkey,
+                        signature
+                    FROM asset_minting_status
+                    WHERE current_state = 'MINTING'
+                "#,
+        )
+        .fetch_all(executor)
+        .await?;
+
+
+        let mut pubkeys_to_signature = Vec::with_capacity(res.len());
+        for row in res {
+            let pubkey_and_signature =
+                (Self::try_get_from_row::<PublicKey>(&row, "asset_pubkey").ok(), Self::signature_from_row(row));
+
+            if let (Some(pubkey), Some(signature)) = pubkey_and_signature {
+                pubkeys_to_signature.push((pubkey, signature))
+            } else {
+                warn!(
+                    "Failed to get pubkey and signature: pubkey = '{pubkey:?}', signature = '{signature:?}'!",
+                    pubkey = pubkey_and_signature.0.map(|pubkey| pubkey.to_string()),
+                    signature = pubkey_and_signature.1,
+                )
+            }
+        }
+
+        Ok(pubkeys_to_signature)
     }
 
     async fn find_by(

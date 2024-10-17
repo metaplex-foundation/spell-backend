@@ -11,7 +11,6 @@ mod test {
     use mpl_core::instructions::CreateV1Builder;
     use reqwest::Client as ReqWestClient;
     use reqwest::StatusCode;
-    use rest_server::rest::endpoints::l2_assets::CreateAssetRequest;
     use rest_server::rest::endpoints::l2_assets::L1MintRequest;
     use rest_server::rest::endpoints::l2_assets::{CreateAssetRequest, MintStatusResponse};
     use setup::TestEnvironmentCfg;
@@ -133,7 +132,7 @@ mod test {
 
         let mint_req = L1MintRequest { tx: base64_bincode_tx, callback: None };
 
-        let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint");
+        let url = form_url(&test_cfg.rest_server.base_url, test_cfg.rest_server.port, "asset/mint-async");
         let serv_resp = reqwest_client
             .post(url)
             .header("x-api-key", "111")
@@ -149,6 +148,7 @@ mod test {
 
         {
             let mint_status = get_status_of_asset(&reqwest_client, &created_asset.id, &test_cfg).await;
+            dbg!(&mint_status);
             assert!(mint_status.status.eq(&AssetMintStatus::L1_SOLANA));
             assert!(mint_status.signature.is_some())
         }

@@ -10,7 +10,6 @@ use json_rpc::setup::app_context::{AppCtx, ArcedAppCtx};
 use json_rpc::setup::app_setup::AppSetup;
 use setup::TestEnvironmentCfg;
 use solana_sdk::pubkey::Pubkey;
-use util::publickey::PublicKeyExt;
 
 mod utils;
 
@@ -40,7 +39,7 @@ async fn get_assets_by_creator_sorting_by_created_date_desc() {
         .rev()
         .collect::<Vec<String>>();
 
-    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator;
+    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator.clone();
 
     let request_params = GetAssetsByCreator {
         creator_address: creator_pubkey.to_string(),
@@ -85,7 +84,7 @@ async fn get_assets_by_creator_sorting_by_created_date_asc() {
         .map(|asset| asset.asset.name.clone())
         .collect::<Vec<String>>();
 
-    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator;
+    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator.clone();
 
     let request_params = GetAssetsByCreator {
         creator_address: creator_pubkey.to_string(),
@@ -135,7 +134,7 @@ async fn get_assets_by_creator_with_limit_and_sorting_by_creation_data_desc() {
         .take(limit)
         .collect::<Vec<String>>();
 
-    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator;
+    let creator_pubkey = data_from_db.first().expect("Should be present.").asset.creator.clone();
 
     let request_params = GetAssetsByCreator {
         creator_address: creator_pubkey.to_string(),

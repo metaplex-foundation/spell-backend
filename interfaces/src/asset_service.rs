@@ -36,9 +36,9 @@ pub trait AssetService {
     async fn create_asset(
         &self,
         metadata_json: &str,
-        owner: PublicKey,
-        creator: PublicKey,
-        authority: PublicKey,
+        owner: &str,
+        creator: &str,
+        authority: &str,
         name: &str,
         royalty_basis_points: u16,
         collection: Option<PublicKey>,
@@ -49,9 +49,9 @@ pub trait AssetService {
         &self,
         asset_pubkey: PublicKey,
         metadata_json: Option<&str>,
-        owner: Option<PublicKey>,
-        creator: Option<PublicKey>,
-        authority: Option<PublicKey>,
+        owner: Option<String>,
+        creator: Option<String>,
+        authority: Option<String>,
         name: Option<&str>,
         collection: Option<Option<PublicKey>>,
     ) -> anyhow::Result<Option<L2AssetInfo>>;
@@ -82,7 +82,7 @@ pub trait AssetService {
     /// * `limit` - limit of returning assets
     async fn fetch_assets_by_owner(
         &self,
-        owner_pubkey: PublicKey,
+        owner_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -91,7 +91,7 @@ pub trait AssetService {
 
     async fn fetch_assets_by_creator(
         &self,
-        creator_pubkey: PublicKey,
+        creator_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,

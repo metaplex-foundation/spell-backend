@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use actix_web::{
     body::BoxBody,
     get,
@@ -89,14 +91,14 @@ pub async fn create_asset(
     req: web::Json<CreateAssetRequest>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let Some(owner) = PublicKey::from_bs58(&req.owner) else {
-        return bad_request("owner contains malformed public key");
+    if req.owner.is_empty() {
+        return bad_request("owner cannot be empty string");
     };
-    let Some(creator) = PublicKey::from_bs58(&req.creator) else {
-        return bad_request("creator contains malformed public key");
+    if req.creator.is_empty() {
+        return bad_request("creator cannot be empty string");
     };
-    let Some(authority) = PublicKey::from_bs58(&req.authority) else {
-        return bad_request("authority contains malformed public key");
+    if req.authority.is_empty() {
+        return bad_request("authority cannot be empty string");
     };
     let royalty_basis_points = if req.royalty_basis_points > ROYALTY_BASIS_POINTS_MAX_VALUE {
         return bad_request("royalty basis points cannot be greater than '10 000'");
@@ -114,7 +116,15 @@ pub async fn create_asset(
 
     match state
         .asset_service
-        .create_asset(&req.metadata_json, owner, creator, authority, &req.name, royalty_basis_points, collection)
+        .create_asset(
+            &req.metadata_json,
+            req.owner.deref(),
+            req.creator.deref(),
+            req.authority.deref(),
+            &req.name,
+            royalty_basis_points,
+            collection,
+        )
         .await
     {
         Ok(L2AssetInfo { asset, metadata }) => {
@@ -138,21 +148,15 @@ pub async fn update_asset(
         return bad_request("Invalid asset public key");
     };
 
-    let owner = match req.owner.as_ref().map(|v| PublicKey::from_bs58(v)) {
-        Some(Some(v)) => Some(v),
-        Some(None) => return bad_request("owner contains malformed public key"),
-        None => None,
-    };
-    let creator = match req.creator.as_ref().map(|v| PublicKey::from_bs58(v)) {
-        Some(Some(v)) => Some(v),
-        Some(None) => return bad_request("creator contains malformed public key"),
-        None => None,
-    };
-    let authority = match req.authority.as_ref().map(|v| PublicKey::from_bs58(v)) {
-        Some(Some(v)) => Some(v),
-        Some(None) => return bad_request("authority contains malformed public key"),
-        None => None,
-    };
+    if req.owner.as_ref().map(|v| v.is_empty()).unwrap_or(false) {
+        return bad_request("owner cannot be empty string");
+    }
+    if req.creator.as_ref().map(|v| v.is_empty()).unwrap_or(false) {
+        return bad_request("creator cannot be empty string");
+    }
+    if req.authority.as_ref().map(|v| v.is_empty()).unwrap_or(false) {
+        return bad_request("authority cannot be empty string");
+    }
 
     // None - don't touch collection during the update
     // Some(None) - need to delete collection
@@ -170,7 +174,15 @@ pub async fn update_asset(
 
     match state
         .asset_service
-        .update_asset(pubkey, req.metadata_json.as_deref(), owner, creator, authority, req.name.as_deref(), collection)
+        .update_asset(
+            pubkey,
+            req.metadata_json.as_deref(),
+            req.owner.clone(),
+            req.creator.clone(),
+            req.authority.clone(),
+            req.name.as_deref(),
+            collection,
+        )
         .await
     {
         Ok(mayble_l2) => match mayble_l2 {

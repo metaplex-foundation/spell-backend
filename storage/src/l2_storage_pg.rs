@@ -44,10 +44,10 @@ impl L2Storage for L2StoragePg {
             builder
                 .push_bind(asset.pubkey)
                 .push_bind(&asset.name)
-                .push_bind(asset.owner)
-                .push_bind(asset.creator)
+                .push_bind(&asset.owner)
+                .push_bind(&asset.creator)
                 .push_bind(asset.collection)
-                .push_bind(asset.authority)
+                .push_bind(&asset.authority)
                 .push_bind(asset.royalty_basis_points as i16)
                 .push_bind(asset.create_timestamp)
                 .push_bind(asset.update_timestamp)
@@ -142,7 +142,7 @@ impl L2Storage for L2StoragePg {
 
     async fn find_by_owner(
         &self,
-        owner_pubkey: &PublicKey,
+        owner_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -154,7 +154,7 @@ impl L2Storage for L2StoragePg {
 
     async fn find_by_creator(
         &self,
-        creator_pubkey: &PublicKey,
+        creator_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -432,7 +432,7 @@ impl L2StoragePg {
     async fn find_by(
         &self,
         column_name: &str,
-        primary_key: &PublicKey,
+        primary_key: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,

@@ -10,7 +10,7 @@ pub trait L2Storage {
     async fn find_batch(&self, pubkeys: &[PublicKey]) -> anyhow::Result<Vec<L2Asset>>;
     async fn find_by_owner(
         &self,
-        owner_pubkey: &PublicKey,
+        owner_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -18,7 +18,7 @@ pub trait L2Storage {
     ) -> anyhow::Result<Vec<L2Asset>>;
     async fn find_by_creator(
         &self,
-        creator_pubkey: &PublicKey,
+        creator_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,

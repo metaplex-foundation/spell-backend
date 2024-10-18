@@ -10,10 +10,10 @@ CREATE TYPE asset_state AS ENUM (
 CREATE TABLE IF NOT EXISTS l2_assets_v1 (
 	asset_pubkey BYTEA NOT NULL,
     asset_name varchar(200) NOT NULL,
-    asset_owner BYTEA NOT NULL,
-    asset_creator BYTEA NOT NULL,
+    asset_owner varchar(64) NOT NULL,
+    asset_creator varchar(64) NOT NULL,
     asset_collection BYTEA DEFAULT NULL,
-    asset_authority BYTEA NOT NULL,
+    asset_authority varchar(64) NOT NULL,
     current_state asset_state NOT NULL DEFAULT 'L2',
     royalty_basis_points SMALLINT NOT NULL DEFAULT 500,
     asset_create_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),

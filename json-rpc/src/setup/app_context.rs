@@ -4,11 +4,15 @@ use crate::setup::types::MetadataUriCreator;
 use interfaces::asset_service::AssetService;
 use service::asset_service_impl::AssetServiceImpl;
 use solana_integration::l1_service_solana::SolanaService;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
+
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    ConnectOptions, PgPool,
+};
 use std::sync::Arc;
 use storage::asset_storage_s3::S3Storage;
 use storage::l2_storage_pg::L2StoragePg;
+use tracing::log::LevelFilter;
 use tracing::{error, info};
 use util::hd_wallet::HdWalletProducer;
 
@@ -85,10 +89,15 @@ impl AppCtx {
             "Creating connection pool from: '{}', with max_size: '{}', and min_size: '{}' connections.",
             db_url, max_size_pool, min_size_pool,
         );
+        let mut options = db_url.parse::<PgConnectOptions>().unwrap();
+        options.log_statements(LevelFilter::Off);
+        options.log_slow_statements(LevelFilter::Off, std::time::Duration::from_secs(100));
+        options = options.extra_float_digits(None); // needed for Pgbouncer
+
         PgPoolOptions::new()
             .max_connections(max_size_pool)
             .min_connections(min_size_pool)
-            .connect(db_url)
+            .connect_with(options)
             .await
             .unwrap_or_else(|e| panic!("Could not connect to db: '{}'!", e))
     }

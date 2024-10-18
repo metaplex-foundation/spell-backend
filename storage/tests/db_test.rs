@@ -3,6 +3,7 @@ use entities::l2::L2Asset;
 use interfaces::l2_storage::Bip44DerivationSequence;
 use interfaces::l2_storage::DerivationValues;
 use interfaces::l2_storage::L2Storage;
+use setup::data_gen::rand_pubkey_str;
 use setup::{data_gen::rand_pubkey, TestEnvironment};
 use storage::l2_storage_pg::L2StoragePg;
 
@@ -17,10 +18,10 @@ async fn test_save_fetch() {
     let asset = L2Asset {
         pubkey: rand_pubkey(),
         name: "name".to_string(),
-        owner: rand_pubkey(),
-        creator: rand_pubkey(),
+        owner: rand_pubkey_str(),
+        creator: rand_pubkey_str(),
         collection: None,
-        authority: rand_pubkey(),
+        authority: rand_pubkey_str(),
         royalty_basis_points: 0,
         create_timestamp: NaiveDateTime::default(),
         update_timestamp: NaiveDateTime::default(),

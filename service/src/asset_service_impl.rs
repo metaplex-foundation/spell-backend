@@ -8,11 +8,11 @@ use interfaces::{
     l1_service::{L1Service, ParsedMintIxInfo},
     l2_storage::{Bip44DerivationSequence, DerivationValues, L2Storage, L2StorageError},
 };
-use solana_sdk::signature::Signature;
+use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use solana_sdk::{signer::Signer, transaction::Transaction};
-use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{future::Future, str::FromStr};
 use tracing::{debug, error, info};
 use util::publickey::PublicKeyExt;
 use util::{hd_wallet::HdWalletProducer, nft_json::validate_metadata_contains_uris};
@@ -33,9 +33,9 @@ impl AssetService for AssetServiceImpl {
     async fn create_asset(
         &self,
         metadata_json: &str,
-        owner: PublicKey,
-        creator: PublicKey,
-        authority: PublicKey,
+        owner: &str,
+        creator: &str,
+        authority: &str,
         name: &str,
         royalty_basis_points: u16,
         collection: Option<PublicKey>,
@@ -55,10 +55,10 @@ impl AssetService for AssetServiceImpl {
         let asset = L2Asset {
             pubkey: asset_pubkey,
             name: name.to_string(),
-            owner,
-            creator,
+            owner: owner.to_string(),
+            creator: creator.to_string(),
             collection,
-            authority,
+            authority: authority.to_string(),
             royalty_basis_points,
             create_timestamp: utc_now,
             update_timestamp: utc_now,
@@ -75,9 +75,9 @@ impl AssetService for AssetServiceImpl {
         &self,
         asset_pubkey: PublicKey,
         metadata_json: Option<&str>,
-        owner: Option<PublicKey>,
-        creator: Option<PublicKey>,
-        authority: Option<PublicKey>,
+        owner: Option<String>,
+        creator: Option<String>,
+        authority: Option<String>,
         name: Option<&str>,
         collection: Option<Option<PublicKey>>,
     ) -> anyhow::Result<Option<L2AssetInfo>> {
@@ -138,7 +138,7 @@ impl AssetService for AssetServiceImpl {
 
     async fn fetch_assets_by_owner(
         &self,
-        owner_pubkey: PublicKey,
+        owner_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -160,7 +160,7 @@ impl AssetService for AssetServiceImpl {
 
     async fn fetch_assets_by_creator(
         &self,
-        creator_pubkey: PublicKey,
+        creator_pubkey: &str,
         sorting: &AssetSorting,
         limit: u32,
         before: Option<&str>,
@@ -251,14 +251,20 @@ impl AssetServiceImpl {
             anyhow::bail!(L1MintError::WrongName(l2_asset.name.clone(), mint_ix.name.clone()))
         }
         if let Some(authority) = mint_ix.authority {
-            if authority != l2_asset.authority {
+            let is_same = Pubkey::from_str(&l2_asset.authority)
+                .map(|l2_authority| l2_authority.to_bytes() == authority)
+                .unwrap_or(false);
+            if !is_same {
                 anyhow::bail!(L1MintError::WrongAuthority)
             }
         } else {
             anyhow::bail!(L1MintError::MissingAuthority)
         }
         if let Some(owner) = mint_ix.owner {
-            if owner != l2_asset.owner {
+            let is_same = Pubkey::from_str(&l2_asset.owner)
+                .map(|l2_owner| l2_owner.to_bytes() == owner)
+                .unwrap_or(false);
+            if !is_same {
                 anyhow::bail!(L1MintError::WrongOwner)
             }
         } else {

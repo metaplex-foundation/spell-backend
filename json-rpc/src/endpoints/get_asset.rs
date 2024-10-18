@@ -72,8 +72,6 @@ pub async fn get_asset_batch(req_params: GetAssetBatch, ctx: ArcedAppCtx) -> Jso
 }
 
 pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) -> JsonRpcResponse {
-    let owner_address = PublicKey::from_bs58(&req_params.owner_address)
-        .ok_or(DasApiError::PubkeyValidationError(req_params.owner_address.to_owned()))?;
     let sorting = req_params.sort_by.map(Into::into).unwrap_or_default();
     let limit = verify_limit(req_params.limit)?;
     let before = req_params.before;
@@ -86,7 +84,7 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
 
     let l2_assets = ctx
         .asset_service
-        .fetch_assets_by_owner(owner_address, &sorting, limit, before.as_deref(), after.as_deref())
+        .fetch_assets_by_owner(&req_params.owner_address, &sorting, limit, before.as_deref(), after.as_deref())
         .await
         .map_err(|_| DasApiError::DatabaseError)?;
 
@@ -94,8 +92,6 @@ pub async fn get_asset_by_owner(req_params: GetAssetsByOwner, ctx: ArcedAppCtx) 
 }
 
 pub async fn get_asset_by_creator(req_params: GetAssetsByCreator, ctx: ArcedAppCtx) -> JsonRpcResponse {
-    let creator_address = PublicKey::from_bs58(&req_params.creator_address)
-        .ok_or(DasApiError::PubkeyValidationError(req_params.creator_address.to_owned()))?;
     let sorting = req_params.sort_by.map(Into::into).unwrap_or_default();
     let limit = verify_limit(req_params.limit)?;
     let before = req_params.before;
@@ -108,7 +104,7 @@ pub async fn get_asset_by_creator(req_params: GetAssetsByCreator, ctx: ArcedAppC
 
     let l2_assets = ctx
         .asset_service
-        .fetch_assets_by_creator(creator_address, &sorting, limit, before.as_deref(), after.as_deref())
+        .fetch_assets_by_creator(&req_params.creator_address, &sorting, limit, before.as_deref(), after.as_deref())
         .await
         .map_err(|_| DasApiError::DatabaseError)?;
 

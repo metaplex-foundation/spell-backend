@@ -472,7 +472,7 @@ impl From<(AssetExtended, Value)> for Asset {
 
         let (links, files) = parse_files_from_selector(selector);
         let creators = vec![Creator {
-            address: crate::l2::pubkey_to_string(l2_asset.creator),
+            address: l2_asset.creator.clone(),
             share: 100,
             verified: true, // todo: is it?
         }];
@@ -486,10 +486,7 @@ impl From<(AssetExtended, Value)> for Asset {
                 metadata: meta,
                 links: Some(links),
             }),
-            authorities: Some(vec![Authority {
-                address: crate::l2::pubkey_to_string(l2_asset.authority),
-                scopes: vec![Scope::Full],
-            }]),
+            authorities: Some(vec![Authority { address: l2_asset.authority.clone(), scopes: vec![Scope::Full] }]),
             compression: Some(Compression::default()),
             grouping: l2_asset.collection.map(|c| {
                 vec![Group {
@@ -513,7 +510,7 @@ impl From<(AssetExtended, Value)> for Asset {
                 delegated: false,
                 delegate: None, // for core assets can come from transfer delegate plugin
                 ownership_model: OwnershipModel::Single,
-                owner: crate::l2::pubkey_to_string(l2_asset.owner),
+                owner: l2_asset.owner.clone(),
             },
             uses: None, // for core assets
             supply: None,
@@ -574,19 +571,19 @@ mod test {
         .to_string();
 
         let id = [1u8; 32];
-        let owner = [2u8; 32];
-        let creator = [3u8; 32];
-        let authority = [4u8; 32];
+        let owner = "owner1111".to_string();
+        let creator = "creator1111".to_string();
+        let authority = "authority1111".to_string();
         let collection = [5u8; 32];
 
         let asset_ex = AssetExtended {
             asset: L2Asset {
                 pubkey: id,
                 name: "name1".to_string(),
-                owner,
-                creator,
+                owner: owner.clone(),
+                creator: creator.clone(),
                 collection: Some(collection),
-                authority,
+                authority: authority.clone(),
                 royalty_basis_points: 0,
                 create_timestamp: NaiveDateTime::parse_from_str("2015-02-18 23:16:09", "%Y-%m-%d %H:%M:%S").unwrap(),
                 update_timestamp: NaiveDateTime::parse_from_str("2015-02-18 23:16:09", "%Y-%m-%d %H:%M:%S").unwrap(),
@@ -612,9 +609,9 @@ mod test {
                 .unwrap(),
             "name1"
         );
-        assert_eq!(dto.ownership.owner, bs58::encode(owner).into_string());
-        assert_eq!(dto.creators.as_ref().unwrap()[0].address, bs58::encode(creator).into_string());
-        assert_eq!(dto.authorities.as_ref().unwrap()[0].address, bs58::encode(authority).into_string());
+        assert_eq!(dto.ownership.owner, owner);
+        assert_eq!(dto.creators.as_ref().unwrap()[0].address, creator);
+        assert_eq!(dto.authorities.as_ref().unwrap()[0].address, authority);
         assert_eq!(
             dto.grouping.as_ref().unwrap()[0].clone().group_value.unwrap(),
             bs58::encode(collection).into_string()

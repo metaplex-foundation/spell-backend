@@ -10,9 +10,10 @@ bucket_for_json_metadata = "asset-metadata"
 bucket_for_binary_assets = "asset-binary"
 
 [database]
-connection_url="postgres://postgres:1111@localhost:5432/solana"
+connection_url = "postgres://postgres:1111@localhost:5432/solana"
 min_connections = 1
 max_connections = 1
+log_level = "INFO"
 
 [metrics]
 enabled = false

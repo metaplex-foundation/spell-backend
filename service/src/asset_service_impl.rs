@@ -1,5 +1,6 @@
 use crate::converter::get_metadata_uri_for_key;
 use chrono::Utc;
+use entities::dto::AssetMintStatus;
 use entities::l2::{AssetSorting, L2Asset, PublicKey};
 use interfaces::{
     asset_service::{AssetService, L1MintError, L2AssetInfo},
@@ -205,13 +206,7 @@ impl AssetService for AssetServiceImpl {
             .make_hd_wallet(l2_asset.bip44_account_num, l2_asset.bip44_address_num);
 
         let tx_signature = match self.l1_service.execute_mint_transaction(tx, &asset_kp, exec_sync).await {
-            Ok(signature) => {
-                info!(
-                    "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent!",
-                    asset_pubkey = asset_pubkey.to_string()
-                );
-                signature
-            }
+            Ok(signature) => signature,
             Err(e) => {
                 self.l2_storage.mint_didnt_happen(&asset_pubkey).await?;
                 anyhow::bail!(e);
@@ -232,6 +227,13 @@ impl AssetService for AssetServiceImpl {
         }
 
         Ok(())
+    }
+
+    async fn get_mint_status(&self, public_key: PublicKey) -> anyhow::Result<(AssetMintStatus, Option<Signature>)> {
+        self.l2_storage
+            .get_mint_status_and_signature(&public_key)
+            .await
+            .map(|(status, signature)| (status, signature.and_then(Self::parse_signature)))
     }
 }
 
@@ -271,6 +273,32 @@ impl AssetServiceImpl {
         if mint_ix.collection != l2_asset.collection {
             anyhow::bail!(L1MintError::WrongOwner)
         }
+        Ok(())
+    }
+
+    /// This function processes assets that are in the `MINTING` status on startup.
+    /// It retrieves the public keys and signatures of the assets from the storage, parses the signatures,
+    /// and then starts background processing to await and save the mint status for each asset.
+    pub async fn process_minting_assets_on_startup(&self) -> anyhow::Result<()> {
+        let process_in_background = |(pubkey, signature): (PublicKey, Signature)| {
+            info!("Starting mint status processing for: '{pubkey}' asset.", pubkey = pubkey.to_string());
+            Self::in_background(Self::await_for_mint_status_and_save_it(
+                signature,
+                pubkey,
+                self.l1_service.clone(),
+                self.l2_storage.clone(),
+            ))
+        };
+
+        info!("Starting mint status processing.");
+
+        self.l2_storage
+            .get_pubkeys_and_signatures_of_assets_in_minting_status()
+            .await?
+            .into_iter()
+            .filter_map(|(pubkey, signature)| Self::parse_signature(signature).map(|signature| (pubkey, signature)))
+            .for_each(process_in_background);
+
         Ok(())
     }
 

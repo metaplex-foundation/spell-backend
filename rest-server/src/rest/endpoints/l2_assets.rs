@@ -6,6 +6,7 @@ use actix_web::{
     http::{header::ContentType, StatusCode},
     post, put, web, HttpResponse, Responder,
 };
+use entities::dto::AssetMintStatus;
 use entities::l2::PublicKey;
 use interfaces::{
     asset_service::{L1MintError, L2AssetInfo},
@@ -75,6 +76,12 @@ pub struct L1MintRequest {
     /// BASE64 encoded bincode serialized solana transaction
     pub tx: String,
     pub callback: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MintStatusResponse {
+    pub status: AssetMintStatus,
+    pub signature: Option<String>,
 }
 
 /// Creates an L2 asset.
@@ -271,6 +278,21 @@ pub async fn mint_transaction_async(req: web::Json<L1MintRequest>, state: web::D
                 internal_server_error(Some(&e.to_string()))
             }
         }
+    }
+}
+
+#[get("/asset/mint/{pubkey}")]
+pub async fn mint_status(asset_pubkey: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
+    let Some(pubkey) = PublicKey::from_bs58(&asset_pubkey) else {
+        return bad_request("Invalid asset public key");
+    };
+
+    match state.asset_service.get_mint_status(pubkey).await {
+        Ok((status, signature)) => {
+            let resp = MintStatusResponse { status, signature: signature.map(|signature| signature.to_string()) };
+            HttpResponse::Ok().content_type(ContentType::json()).json(resp)
+        }
+        Err(e) => internal_server_error(Some(&e.to_string())),
     }
 }
 

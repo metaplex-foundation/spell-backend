@@ -230,7 +230,7 @@ pub async fn fill_database_with_test_data(
         filled_data_from_db.push(
             create_asset(asset_req, app_ctx.clone())
                 .await
-                .unwrap_or_else(|e| panic!("Cannot create asset: {e}!")),
+                .unwrap_or_else(|e| panic!("Cannot create asset: {e:?}!")),
         );
     }
 

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use mpl_core::instructions::CreateV1InstructionArgs;
 use solana_client::nonblocking::rpc_client::{self, RpcClient};
-use solana_sdk::signature::Signature;
+use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::signer::keypair::Keypair;
 use solana_sdk::transaction::Transaction;
 use tracing::{error, info};
@@ -32,10 +32,25 @@ impl L1Service for SolanaService {
         exec_sync: bool,
     ) -> anyhow::Result<Signature> {
         tx.try_sign(&[asset_keypair], tx.message.recent_blockhash)?;
+
         if exec_sync {
-            Ok(self.client.send_and_confirm_transaction(&tx).await?)
+            let signature = self.client.send_and_confirm_transaction(&tx).await?;
+
+            info!(
+                "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent and confirmed!",
+                asset_pubkey = asset_keypair.pubkey().to_string()
+            );
+
+            Ok(signature)
         } else {
-            Ok(self.client.send_transaction(&tx).await?)
+            let signature = self.client.send_transaction(&tx).await?;
+
+            info!(
+                "Mint transaction '{signature}' for asset '{asset_pubkey}' successfully sent!",
+                asset_pubkey = asset_keypair.pubkey().to_string()
+            );
+
+            Ok(signature)
         }
     }
 
